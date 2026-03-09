@@ -28,3 +28,39 @@ python leads/lead_manager.py stats
 ```
 
 See [leads/README.md](leads/README.md) for full documentation and workflow details.
+
+## Marketing Assistant
+
+A CLI-based marketing content generation system for creating outreach content targeting cooperative housing societies in Mumbai — especially buildings older than 30 years.
+
+**Generates:** Cold calling scripts, WhatsApp messages, email templates, LinkedIn posts, Twitter/X posts, and marketing strategy ideas.
+
+### Quick Start
+
+```bash
+# List all available marketing content
+python marketing/marketing_assistant.py list
+
+# Cold calling scripts
+python marketing/marketing_assistant.py cold-call
+
+# WhatsApp outreach messages
+python marketing/marketing_assistant.py whatsapp
+
+# Email templates
+python marketing/marketing_assistant.py email
+
+# LinkedIn posts
+python marketing/marketing_assistant.py linkedin
+
+# Twitter/X posts
+python marketing/marketing_assistant.py twitter
+
+# Marketing ideas and strategies
+python marketing/marketing_assistant.py ideas
+
+# Personalize content for a specific society
+python marketing/marketing_assistant.py cold-call --society "Sagar CHS" --location "Bandra West" --age 45
+```
+
+See [marketing/README.md](marketing/README.md) for full documentation and content details.
