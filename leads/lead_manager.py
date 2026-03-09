@@ -68,9 +68,10 @@ def add_lead():
         return
 
     age = input("Approximate Age of Building (years): ").strip()
-    if age and not age.isdigit():
-        print("Error: Age must be a number.")
-        return
+    if age:
+        if not age.isdigit() or int(age) <= 0:
+            print("Error: Age must be a positive number.")
+            return
     lead["Approximate Age (Years)"] = age
 
     lead["Contact Information"] = input("Contact Information (phone/email, optional): ").strip()
