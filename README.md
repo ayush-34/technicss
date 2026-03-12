@@ -64,3 +64,15 @@ python marketing/marketing_assistant.py cold-call --society "Sagar CHS" --locati
 ```
 
 See [marketing/README.md](marketing/README.md) for full documentation and content details.
+
+## Redevelopment Feasibility Calculator
+
+A web-based tool for calculating Preliminary Feasibility Reports (PFR) for building redevelopment projects in Mumbai, as per DCPR 2034 regulations.
+
+**Features:**
+- Input form for project details (plot area, road width, flats, carpet area, etc.)
+- Calculation engine for FSI, buildable area, rehab/sale components, and financial feasibility
+- Results dashboard with tables, visual breakdown, and feasibility conclusion
+- PDF report generation
+
+Open `calculator/index.html` in a browser to use the tool. See [calculator/README.md](calculator/README.md) for hosting instructions and calculation methodology.

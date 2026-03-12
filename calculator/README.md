@@ -54,7 +54,7 @@ This is a static website — no server-side processing is required.
 ### Option 2: Embed in Existing Page
 You can embed the calculator in an existing page on technicss.com using an iframe:
 ```html
-<iframe src="/calculator/index.html" width="100%" height="800" frameborder="0"></iframe>
+<iframe src="/calculator/index.html" width="100%" height="800" style="border: 0;" title="Redevelopment Feasibility Calculator"></iframe>
 ```
 
 ### Option 3: GitHub Pages
