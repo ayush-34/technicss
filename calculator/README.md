@@ -69,8 +69,8 @@ You can embed the calculator in an existing page on technicss.com using an ifram
 
 ### Dependencies
 The calculator loads these libraries from CDN (no local installation required):
-- [jsPDF](https://github.com/parallax/jsPDF) — PDF generation
-- [jsPDF-AutoTable](https://github.com/simonbengtsson/jsPDF-AutoTable) — PDF table formatting
+- [jsPDF](https://github.com/parallax/jsPDF) v4.2.0 — PDF generation
+- [jsPDF-AutoTable](https://github.com/simonbengtsson/jsPDF-AutoTable) v5.0.7 — PDF table formatting
 
 ## Disclaimer
 
