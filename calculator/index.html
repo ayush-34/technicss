@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redevelopment Feasibility Calculator | Technicss</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- jsPDF for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <h1>Technicss</h1>
+                <p class="tagline">Structural Consultants</p>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="hero">
+            <h2>Redevelopment Feasibility Calculator</h2>
+            <p>Preliminary Feasibility Report (PFR) for Building Redevelopment as per DCPR 2034, Mumbai</p>
+        </section>
+
+        <!-- Input Form -->
+        <section class="card" id="input-section">
+            <h3 class="card-title">Project Details</h3>
+            <form id="feasibility-form" novalidate>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="plot-area">Plot Area</label>
+                        <div class="input-with-unit">
+                            <input type="number" id="plot-area" min="0" step="any" placeholder="e.g. 2000" required>
+                            <select id="plot-area-unit">
+                                <option value="sqm">sq.m</option>
+                                <option value="sqft">sq.ft</option>
+                            </select>
+                        </div>
+                        <span class="field-hint" id="plot-area-hint"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="road-width">Road Width (meters)</label>
+                        <input type="number" id="road-width" min="0" step="any" placeholder="e.g. 12" required>
+                        <span class="field-hint">Width of the road abutting the plot</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="zone">Zone</label>
+                        <select id="zone" required>
+                            <option value="suburbs">Suburbs / Extended Suburbs</option>
+                            <option value="island-city">Island City</option>
+                        </select>
+                        <span class="field-hint">Location zone as per DCPR 2034</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="num-flats">Number of Existing Flats</label>
+                        <input type="number" id="num-flats" min="1" step="1" placeholder="e.g. 40" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="carpet-area">Existing Carpet Area per Flat (sq.ft)</label>
+                        <input type="number" id="carpet-area" min="0" step="any" placeholder="e.g. 450" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="existing-builtup">Existing Total Built-up Area (sq.ft)</label>
+                        <input type="number" id="existing-builtup" min="0" step="any" placeholder="e.g. 25000" required>
+                        <span class="field-hint">Total existing built-up area of all buildings</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="num-buildings">Number of Buildings</label>
+                        <input type="number" id="num-buildings" min="1" step="1" placeholder="e.g. 2" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="building-age">Building Age (years)</label>
+                        <input type="number" id="building-age" min="0" step="1" placeholder="e.g. 35" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="market-rate">Market Sale Rate (₹ per sq.ft)</label>
+                        <input type="number" id="market-rate" min="0" step="any" placeholder="e.g. 25000" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="construction-cost">Construction Cost (₹ per sq.ft)</label>
+                        <input type="number" id="construction-cost" min="0" step="any" placeholder="e.g. 4000" value="4000">
+                        <span class="field-hint">Typical range: ₹3,500 – ₹5,500 per sq.ft</span>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" id="calculate-btn">Calculate Feasibility</button>
+                    <button type="reset" class="btn btn-secondary" id="reset-btn">Reset</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Results Dashboard -->
+        <section class="card hidden" id="results-section">
+            <h3 class="card-title">Feasibility Results</h3>
+
+            <!-- FSI Calculations -->
+            <div class="results-block">
+                <h4>FSI Calculations</h4>
+                <table class="results-table" id="fsi-table">
+                    <thead>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <!-- Area Calculations -->
+            <div class="results-block">
+                <h4>Area Calculations</h4>
+                <table class="results-table" id="area-table">
+                    <thead>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <!-- Rehab vs Sale -->
+            <div class="results-block">
+                <h4>Rehab vs Sale Component</h4>
+                <div class="component-bar-container">
+                    <div class="component-bar">
+                        <div class="bar-rehab" id="bar-rehab"></div>
+                        <div class="bar-sale" id="bar-sale"></div>
+                    </div>
+                    <div class="component-labels">
+                        <span class="label-rehab">
+                            <span class="dot rehab-dot"></span> Rehab: <strong id="rehab-pct">0%</strong>
+                        </span>
+                        <span class="label-sale">
+                            <span class="dot sale-dot"></span> Sale: <strong id="sale-pct">0%</strong>
+                        </span>
+                    </div>
+                </div>
+                <table class="results-table" id="component-table">
+                    <thead>
+                        <tr>
+                            <th>Component</th>
+                            <th>Area (sq.ft)</th>
+                            <th>% of Total</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <!-- Financial Feasibility -->
+            <div class="results-block">
+                <h4>Financial Feasibility Estimate</h4>
+                <table class="results-table" id="financial-table">
+                    <thead>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Value (₹)</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <!-- Feasibility Conclusion -->
+            <div class="results-block" id="conclusion-block">
+                <h4>Feasibility Conclusion</h4>
+                <div class="conclusion-box" id="conclusion-box">
+                    <p id="conclusion-text"></p>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="form-actions">
+                <button class="btn btn-primary" id="download-pdf-btn">Download PDF Report</button>
+                <button class="btn btn-secondary" id="recalculate-btn">Modify Inputs</button>
+            </div>
+
+            <div class="disclaimer">
+                <strong>Disclaimer:</strong> This is a preliminary estimate based on DCPR 2034 norms and general assumptions. Actual feasibility may vary based on site-specific conditions, regulatory approvals, premium charges, and market conditions. Please consult a qualified structural consultant for a detailed feasibility study.
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; <span id="footer-year"></span> Technicss Structural Consultants. All rights reserved.</p>
+            <p class="footer-note">This tool provides preliminary estimates only. Consult a professional for detailed analysis.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
