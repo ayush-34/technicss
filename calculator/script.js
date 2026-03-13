@@ -407,6 +407,34 @@ var profitMargin = (developerProfit / saleRevenue) * 100;
             body: [
                 ["Existing FSI", r.existingFSI.toFixed(2)],
                 ["Base Permissible FSI", r.baseFSI.toFixed(2)],
+               function getBaseFSI(roadWidth, zone, scheme) {
+
+    if (scheme === "33_5") {
+        return 3.5;
+    }
+
+    if (scheme === "33_7") {
+        return 4.0;
+    }
+
+    if (scheme === "33_9") {
+        return 4.5;
+    }
+
+    // default normal society redevelopment
+
+    if (zone === "island-city") {
+        if (roadWidth < 9) return 1.33;
+        if (roadWidth < 12) return 2.0;
+        return 3.0;
+    }
+
+    // suburbs
+
+    if (roadWidth < 9) return 2.0;
+    if (roadWidth < 12) return 2.5;
+    return 3.0;
+}
                 ["Fungible FSI (35% Residential)", r.fungibleFSI.toFixed(2)],
                 ["TDR Loading", r.tdr.toFixed(2)],
                 ["Total Permissible FSI", r.totalPermissibleFSI.toFixed(2)]
