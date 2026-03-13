@@ -13,6 +13,9 @@
     var REHAB_CARPET_INCREASE_PCT = 0.35; // 35% carpet area increase for rehab
     var CARPET_TO_BUILTUP_FACTOR = 1.30; // loading factor for common areas
     var PREMIUM_CHARGES_PCT = 0.10; // 10% of construction cost as premium/charges
+    var RENT_RATE = 80;
+    var CORPUS_PER_FLAT = 2000000;
+    var PROJECT_DURATION = 36;
 
     // ---- FSI Rules per DCPR 2034 ----
     function getBaseFSI(roadWidth, zone) {
