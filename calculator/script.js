@@ -164,17 +164,26 @@
         if (saleComponentArea < 0) saleComponentArea = 0;
 
         // Financial Calculations
-        var saleRevenue = saleComponentArea * marketRate;
-        var totalConstructionCost = totalBuildableArea * constructionCost;
-        var premiumCharges = totalConstructionCost * PREMIUM_CHARGES_PCT;
-        var totalProjectCost = totalConstructionCost + premiumCharges;
-        var developerProfit = saleRevenue - totalProjectCost;
-        var profitMarginPct = saleRevenue > 0 ? (developerProfit / saleRevenue) * 100 : 0;
+var saleRevenue = saleComponentArea * marketSaleRate;
+var constructionCost = totalBuildableArea * constructionCostRate;
+var premiumCharges = constructionCost * PREMIUM_CHARGES_PCT;
 
+// NEW REALISTIC COSTS
+
+var rentRate = 80; // ₹80 per sq.ft monthly rent
+var projectDuration = 36; // months
+var rentCost = rehabCarpetArea * rentRate * projectDuration;
+var corpusPerFlat = 2000000; // ₹20 lakh per member
+var corpusCost = numberOfFlats * corpusPerFlat;
+var professionalFees = saleRevenue * 0.02; // architect + PMC
+var financeCost = saleRevenue * 0.08; // interest during project
+var totalProjectCost = constructionCost + premiumCharges + rentCost + corpusCost + professionalFees + financeCost;
+
+var developerProfit = saleRevenue - totalProjectCost;
+var profitMargin = (developerProfit / saleRevenue) * 100;
         // Rehab vs Sale percentages
         var rehabPct = totalBuildableArea > 0 ? (totalRehabBuiltup / totalBuildableArea) * 100 : 0;
         var salePct = totalBuildableArea > 0 ? (saleComponentArea / totalBuildableArea) * 100 : 0;
-
         // Store results
         lastResults = {
             existingFSI: existingFSI,
