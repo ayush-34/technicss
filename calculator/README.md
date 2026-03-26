@@ -9,6 +9,7 @@ A web-based tool for calculating Preliminary Feasibility Reports (PFR) for build
 - **Results Dashboard**: Displays FSI tables, area calculations, rehab vs sale breakdown with visual bar, financial estimates, and a feasibility conclusion
 - **PDF Report**: Generate and download a professional "Preliminary Feasibility Report (PFR) for Redevelopment" in PDF format
 - **Responsive Design**: Works on desktop, tablet, and mobile devices
+- **Regulation Presets**: Includes DCPR 2034 scheme selections like 33(1), 33(5), 33(5) without MHADA sharing, 33(7), 33(9), 33(10), 33(11), 33(19), and combined 30(A)+33 variants
 
 ## DCPR 2034 Calculations
 

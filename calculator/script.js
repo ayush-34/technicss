@@ -22,8 +22,18 @@
         var labels = {
             "33_1": "Normal Housing Society (33(1))",
             "33_5": "MHADA Layout (33(5))",
+            "33_5_no_mhada_share": "33(5) Without MHADA Sharing",
             "33_7": "Cessed Building (33(7))",
             "33_9": "Cluster Redevelopment (33(9))",
+            "33_10": "Regulation 33(10)",
+            "33_11": "Regulation 33(11)",
+            "33_19": "Regulation 33(19)",
+            "30a_33_7a": "30(A)+33(7A)",
+            "30a_33_7b": "30(A)+33(7B)",
+            "30a_33_7a_33_12b": "30(A)+33(7A)+33(12B)",
+            "30a_33_7b_33_12b": "30(A)+33(7B)+33(12B)",
+            "30a_33_7a_33_20b": "30(A)+33(7A)+33(20B)",
+            "30a_33_7b_33_20b": "30(A)+33(7B)+33(20B)",
             "suburbs": "Suburbs / Extended Suburbs",
             "island-city": "Island City"
         };
@@ -34,8 +44,18 @@
     function getBaseFSI(roadWidth, zone) {
         // Scheme-specific FSI overrides
         if (zone === "33_5") return 3.5;
+        if (zone === "33_5_no_mhada_share") return 4.0;
         if (zone === "33_7") return 4.0;
         if (zone === "33_9") return 4.5;
+        if (zone === "33_10") return 4.0;
+        if (zone === "33_11") return 4.0;
+        if (zone === "33_19") return 4.0;
+        if (zone === "30a_33_7a") return 4.0;
+        if (zone === "30a_33_7b") return 4.0;
+        if (zone === "30a_33_7a_33_12b") return 4.5;
+        if (zone === "30a_33_7b_33_12b") return 4.5;
+        if (zone === "30a_33_7a_33_20b") return 4.5;
+        if (zone === "30a_33_7b_33_20b") return 4.5;
         // Island City norms (33_1 or explicit island-city)
         if (zone === "island-city") {
             if (roadWidth < 9) return 1.33;
