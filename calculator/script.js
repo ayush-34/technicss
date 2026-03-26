@@ -9,10 +9,48 @@
 
     // ---- Constants ----
     var SQM_TO_SQFT = 10.7639;
-    var FUNGIBLE_RESIDENTIAL_PCT = 0.35;
-    var REHAB_CARPET_INCREASE_PCT = 0.35; // 35% carpet area increase for rehab
     var CARPET_TO_BUILTUP_FACTOR = 1.30; // loading factor for common areas
-    var PREMIUM_CHARGES_PCT = 0.10; // 10% of construction cost as premium/charges
+
+    // ---- CONFIG – all editable assumptions ----
+    var CONFIG = {
+        fungiblePct:     0.35,   // Fungible FSI as % of base FSI
+        tdrLoading:      0.5,    // TDR applied for eligible plots
+        rehabIncrease:   0.35,   // Rehab carpet increase (35%)
+        rentRate:        80,     // ₹/sq.ft/month alternate accommodation rent
+        projectDuration: 36,     // months
+        corpusPerFlat:   2000000,// ₹ per flat corpus fund
+        premiumPct:      0.15,   // 15% of construction cost
+        financePct:      0.10,   // 10% of net sale revenue
+        riskPct:         0.10,   // 10% of net sale revenue
+        saleDiscount:    0.10,   // 10% discount on gross sale revenue
+        transitRate:     1500,   // ₹/sq.ft for transit camp
+        includeTransit:  false
+    };
+
+    // ---- Read CONFIG from Settings UI ----
+    function readConfig() {
+        function pct(id) {
+            var v = parseFloat(document.getElementById(id).value);
+            return (isNaN(v) ? 0 : v) / 100;
+        }
+        function num(id) {
+            var v = parseFloat(document.getElementById(id).value);
+            return isNaN(v) ? 0 : v;
+        }
+        CONFIG.fungiblePct     = pct("cfg-fungible-pct");
+        CONFIG.tdrLoading      = num("cfg-tdr-loading");
+        CONFIG.rehabIncrease   = pct("cfg-rehab-increase");
+        CONFIG.rentRate        = num("cfg-rent-rate");
+        CONFIG.projectDuration = num("cfg-project-duration");
+        CONFIG.corpusPerFlat   = num("cfg-corpus-per-flat");
+        CONFIG.premiumPct      = pct("cfg-premium-pct");
+        CONFIG.financePct      = pct("cfg-finance-pct");
+        CONFIG.riskPct         = pct("cfg-risk-pct");
+        CONFIG.saleDiscount    = pct("cfg-sale-discount");
+        CONFIG.transitRate     = num("cfg-transit-rate");
+        CONFIG.includeTransit  = document.getElementById("cfg-transit-camp").checked;
+    }
+
     var SCHEME_BASE_FSI = {
         "33_5": 3.5,
         "33_5_no_mhada_share": 4.0,
@@ -28,9 +66,6 @@
         "30a_33_7a_33_20b": 4.5,
         "30a_33_7b_33_20b": 4.5
     };
-    var RENT_RATE = 80;
-    var CORPUS_PER_FLAT = 2000000;
-    var PROJECT_DURATION = 36;
 
     // ---- Zone Label Helper ----
     function getZoneLabel(zone) {
@@ -76,8 +111,7 @@
             return 0; // TDR not commonly loaded in island city
         }
         if (roadWidth < 9) return 0;
-        if (roadWidth < 12) return 0.5;
-        return 1.0;
+        return CONFIG.tdrLoading;
     }
 
     // ---- Utility Functions ----
@@ -105,6 +139,19 @@
     var recalculateBtn = document.getElementById("recalculate-btn");
     var plotAreaHint = document.getElementById("plot-area-hint");
     var footerYear = document.getElementById("footer-year");
+    var transitCampToggle = document.getElementById("cfg-transit-camp");
+    var transitRateGroup = document.getElementById("transit-rate-group");
+
+    // Transit camp rate group visibility toggle
+    if (transitCampToggle && transitRateGroup) {
+        transitCampToggle.addEventListener("change", function () {
+            if (transitCampToggle.checked) {
+                transitRateGroup.classList.remove("hidden");
+            } else {
+                transitRateGroup.classList.add("hidden");
+            }
+        });
+    }
 
     // Store last results for PDF
     var lastResults = null;
@@ -156,6 +203,9 @@
 
     // ---- Main Calculation ----
     function calculate() {
+        // Read settings before computing
+        readConfig();
+
         // Gather inputs
         var plotAreaRaw = parseFloat(document.getElementById("plot-area").value);
         var plotAreaUnitVal = plotAreaUnit.value;
@@ -167,7 +217,7 @@
         var numBuildings = parseInt(document.getElementById("num-buildings").value, 10);
         var buildingAge = parseInt(document.getElementById("building-age").value, 10);
         var marketRate = parseFloat(document.getElementById("market-rate").value);
-        var constructionCost = parseFloat(document.getElementById("construction-cost").value) || 4000;
+        var constructionRate = parseFloat(document.getElementById("construction-cost").value) || 4000;
 
         // Convert plot area to sq.ft for calculations
         var plotAreaSqFt = plotAreaUnitVal === "sqm" ? plotAreaRaw * SQM_TO_SQFT : plotAreaRaw;
@@ -187,40 +237,62 @@
             numBuildings: numBuildings,
             buildingAge: buildingAge,
             marketRate: marketRate,
-            constructionCost: constructionCost
+            constructionCost: constructionRate
         };
 
         // FSI Calculations
         var existingFSI = existingBuiltup / plotAreaSqFt;
         var baseFSI = getBaseFSI(roadWidth, zone);
-        var fungibleFSI = baseFSI * FUNGIBLE_RESIDENTIAL_PCT;
+        var fungibleFSI = baseFSI * CONFIG.fungiblePct;
         var tdr = getTDR(roadWidth, zone);
         var totalPermissibleFSI = baseFSI + fungibleFSI + tdr;
 
         // Area Calculations
         var totalBuildableArea = totalPermissibleFSI * plotAreaSqFt;
         var existingTotalCarpet = numFlats * carpetAreaPerFlat;
-        var rehabCarpetPerFlat = carpetAreaPerFlat * (1 + REHAB_CARPET_INCREASE_PCT);
+        var rehabCarpetPerFlat = carpetAreaPerFlat * (1 + CONFIG.rehabIncrease);
         var totalRehabCarpet = numFlats * rehabCarpetPerFlat;
         var totalRehabBuiltup = totalRehabCarpet * CARPET_TO_BUILTUP_FACTOR;
         var saleComponentArea = totalBuildableArea - totalRehabBuiltup;
         if (saleComponentArea < 0) saleComponentArea = 0;
 
-        // Financial Calculations
-        var saleRevenue = saleComponentArea * marketRate;
-        var totalConstructionCost = totalBuildableArea * constructionCost;
-        var premiumCharges = totalConstructionCost * PREMIUM_CHARGES_PCT;
-        var rentCost = totalRehabCarpet * RENT_RATE * PROJECT_DURATION;
-        var corpusCost = numFlats * CORPUS_PER_FLAT;
+        // Financial Calculations (realistic model)
+        // Effective sale revenue: apply discount for loading, negotiation, unsold inventory
+        var grossSaleRevenue = saleComponentArea * marketRate;
+        var saleRevenue = grossSaleRevenue * (1 - CONFIG.saleDiscount);
+
+        // Costs
+        var constructionCost = totalBuildableArea * constructionRate;
+        var premiumCharges = constructionCost * CONFIG.premiumPct;
+        var rentCost = totalRehabCarpet * CONFIG.rentRate * CONFIG.projectDuration;
+        var corpusCost = numFlats * CONFIG.corpusPerFlat;
         var professionalFees = saleRevenue * 0.02;
-        var financeCost = saleRevenue * 0.08;
-        var totalProjectCost = totalConstructionCost + premiumCharges + rentCost + corpusCost + professionalFees + financeCost;
+        var financeCost = saleRevenue * CONFIG.financePct;
+        var riskCost = saleRevenue * CONFIG.riskPct;
+        var transitCost = CONFIG.includeTransit ? totalRehabCarpet * CONFIG.transitRate : 0;
+
+        var totalProjectCost = constructionCost + premiumCharges + rentCost + corpusCost +
+            professionalFees + financeCost + riskCost + transitCost;
+
         var developerProfit = saleRevenue - totalProjectCost;
-        // Margin on sale revenue — standard developer benchmark (20%+ revenue margin = feasible)
         var profitMarginPct = saleRevenue > 0 ? (developerProfit / saleRevenue) * 100 : 0;
+
         // Rehab vs Sale percentages
         var rehabPct = totalBuildableArea > 0 ? (totalRehabBuiltup / totalBuildableArea) * 100 : 0;
         var salePct = totalBuildableArea > 0 ? (saleComponentArea / totalBuildableArea) * 100 : 0;
+
+        // Feasibility rating
+        var feasibilityRating;
+        if (saleComponentArea <= 0) {
+            feasibilityRating = "Not Feasible";
+        } else if (profitMarginPct > 35) {
+            feasibilityRating = "Highly Attractive";
+        } else if (profitMarginPct >= 20) {
+            feasibilityRating = "Feasible";
+        } else {
+            feasibilityRating = "Risky";
+        }
+
         // Store results
         lastResults = {
             existingFSI: existingFSI,
@@ -234,18 +306,22 @@
             totalRehabCarpet: totalRehabCarpet,
             totalRehabBuiltup: totalRehabBuiltup,
             saleComponentArea: saleComponentArea,
+            grossSaleRevenue: grossSaleRevenue,
             saleRevenue: saleRevenue,
-            totalConstructionCost: totalConstructionCost,
+            constructionCost: constructionCost,
             premiumCharges: premiumCharges,
             rentCost: rentCost,
             corpusCost: corpusCost,
             professionalFees: professionalFees,
             financeCost: financeCost,
+            riskCost: riskCost,
+            transitCost: transitCost,
             totalProjectCost: totalProjectCost,
             developerProfit: developerProfit,
             profitMarginPct: profitMarginPct,
             rehabPct: rehabPct,
-            salePct: salePct
+            salePct: salePct,
+            feasibilityRating: feasibilityRating
         };
 
         return lastResults;
@@ -253,12 +329,19 @@
 
     // ---- Render Results ----
     function renderResults(r) {
+        var fungiblePctDisplay = (CONFIG.fungiblePct * 100).toFixed(0);
+        var rehabIncreasePctDisplay = (CONFIG.rehabIncrease * 100).toFixed(0);
+        var saleDiscountPctDisplay = (CONFIG.saleDiscount * 100).toFixed(0);
+        var premiumPctDisplay = (CONFIG.premiumPct * 100).toFixed(0);
+        var financePctDisplay = (CONFIG.financePct * 100).toFixed(0);
+        var riskPctDisplay = (CONFIG.riskPct * 100).toFixed(0);
+
         // FSI Table
         var fsiBody = document.querySelector("#fsi-table tbody");
         fsiBody.innerHTML = [
             row("Existing FSI", r.existingFSI.toFixed(2)),
             row("Base Permissible FSI", r.baseFSI.toFixed(2)),
-            row("Fungible FSI (35% Residential)", r.fungibleFSI.toFixed(2)),
+            row("Fungible FSI (" + fungiblePctDisplay + "% Residential)", r.fungibleFSI.toFixed(2)),
             row("TDR Loading", r.tdr.toFixed(2)),
             rowHighlight("Total Permissible FSI", r.totalPermissibleFSI.toFixed(2))
         ].join("");
@@ -270,7 +353,7 @@
             row("Existing Total Built-up Area", formatNumber(lastInputs.existingBuiltup) + " sq.ft"),
             row("Existing Total Carpet Area (" + lastInputs.numFlats + " flats)", formatNumber(r.existingTotalCarpet) + " sq.ft"),
             rowHighlight("Total Buildable Area", formatNumber(r.totalBuildableArea) + " sq.ft"),
-            row("Rehab Carpet per Flat (+" + (REHAB_CARPET_INCREASE_PCT * 100) + "%)", formatNumber(r.rehabCarpetPerFlat) + " sq.ft"),
+            row("Rehab Carpet per Flat (+" + rehabIncreasePctDisplay + "%)", formatNumber(r.rehabCarpetPerFlat) + " sq.ft"),
             row("Total Rehab Carpet Area", formatNumber(r.totalRehabCarpet) + " sq.ft"),
             row("Total Rehab Built-up Area", formatNumber(r.totalRehabBuiltup) + " sq.ft"),
             rowHighlight("Sale Component Area", formatNumber(r.saleComponentArea) + " sq.ft")
@@ -292,38 +375,108 @@
 
         // Financial Table
         var finBody = document.querySelector("#financial-table tbody");
+        var transitRow = CONFIG.includeTransit
+            ? row("Transit Camp Cost (" + formatNumber(r.totalRehabCarpet) + " sq.ft × ₹" + formatNumber(CONFIG.transitRate) + ")", formatCurrency(r.transitCost))
+            : "";
         finBody.innerHTML = [
-            row("Sale Revenue (" + formatNumber(r.saleComponentArea) + " sq.ft × ₹" + formatNumber(lastInputs.marketRate) + ")", formatCurrency(r.saleRevenue)),
-            row("Construction Cost (" + formatNumber(r.totalBuildableArea) + " sq.ft × ₹" + formatNumber(lastInputs.constructionCost) + ")", formatCurrency(r.totalConstructionCost)),
-            row("Premium & Statutory Charges (10%)", formatCurrency(r.premiumCharges)),
-            row("Rent / Alternate Accommodation (" + lastInputs.numFlats + " flats × " + PROJECT_DURATION + " months)", formatCurrency(r.rentCost)),
-            row("Corpus Fund (₹20L × " + lastInputs.numFlats + " flats)", formatCurrency(r.corpusCost)),
+            row("Gross Sale Revenue (" + formatNumber(r.saleComponentArea) + " sq.ft × ₹" + formatNumber(lastInputs.marketRate) + ")", formatCurrency(r.grossSaleRevenue)),
+            row("Sale Discount (" + saleDiscountPctDisplay + "% – loading / negotiation / unsold)", "–" + formatCurrency(r.grossSaleRevenue - r.saleRevenue)),
+            rowHighlight("Net Sale Revenue", formatCurrency(r.saleRevenue)),
+            row("Construction Cost (" + formatNumber(r.totalBuildableArea) + " sq.ft × ₹" + formatNumber(lastInputs.constructionCost) + ")", formatCurrency(r.constructionCost)),
+            row("Premium & Statutory Charges (" + premiumPctDisplay + "%)", formatCurrency(r.premiumCharges)),
+            row("Rent / Alternate Accommodation (" + lastInputs.numFlats + " flats × " + CONFIG.projectDuration + " months)", formatCurrency(r.rentCost)),
+            row("Corpus Fund (₹" + formatNumber(CONFIG.corpusPerFlat / 100000) + "L × " + lastInputs.numFlats + " flats)", formatCurrency(r.corpusCost)),
             row("Professional Fees (Architect/PMC, 2%)", formatCurrency(r.professionalFees)),
-            row("Finance Cost (8%)", formatCurrency(r.financeCost)),
+            row("Finance Cost (" + financePctDisplay + "%)", formatCurrency(r.financeCost)),
+            row("Risk Factor (" + riskPctDisplay + "% – contingencies, corpus overruns, etc.)", formatCurrency(r.riskCost)),
+            transitRow,
             row("Total Project Cost", formatCurrency(r.totalProjectCost)),
             rowHighlight("Estimated Developer Profit", formatCurrency(r.developerProfit)),
-            row("Profit Margin", r.profitMarginPct.toFixed(1) + "%")
+            row("Profit Margin (on Net Sale Revenue)", r.profitMarginPct.toFixed(1) + "% " + getFeasibilityBadge(r.feasibilityRating))
         ].join("");
 
         // Conclusion
         var conclusionBox = document.getElementById("conclusion-box");
         var conclusionText = document.getElementById("conclusion-text");
-
         conclusionBox.className = "conclusion-box";
 
         if (r.saleComponentArea <= 0) {
             conclusionBox.classList.add("not-feasible");
             conclusionText.innerHTML = "<strong>Not Feasible:</strong> The total rehab area exceeds the total buildable area. There is no sale component available for the developer. The project is not feasible under current parameters.";
+        } else if (r.profitMarginPct > 35) {
+            conclusionBox.classList.add("feasible");
+            conclusionText.innerHTML = "<strong>Highly Attractive &#10003;:</strong> The project shows an excellent profit margin of <strong>" + r.profitMarginPct.toFixed(1) + "%</strong>. With a sale component of <strong>" + formatNumber(r.saleComponentArea) + " sq.ft</strong> and estimated developer profit of <strong>" + formatCurrency(r.developerProfit) + "</strong>, this redevelopment is highly attractive for developers.";
         } else if (r.profitMarginPct >= 20) {
             conclusionBox.classList.add("feasible");
-            conclusionText.innerHTML = "<strong>Feasible:</strong> The project shows a healthy profit margin of <strong>" + r.profitMarginPct.toFixed(1) + "%</strong>. With a sale component of <strong>" + formatNumber(r.saleComponentArea) + " sq.ft</strong> and estimated developer profit of <strong>" + formatCurrency(r.developerProfit) + "</strong>, this redevelopment appears financially viable.";
+            conclusionText.innerHTML = "<strong>Feasible &#10003;:</strong> The project shows a healthy profit margin of <strong>" + r.profitMarginPct.toFixed(1) + "%</strong>. With a sale component of <strong>" + formatNumber(r.saleComponentArea) + " sq.ft</strong> and estimated developer profit of <strong>" + formatCurrency(r.developerProfit) + "</strong>, this redevelopment appears financially viable.";
         } else if (r.profitMarginPct >= 5) {
             conclusionBox.classList.add("marginal");
-            conclusionText.innerHTML = "<strong>Marginally Feasible:</strong> The project shows a thin profit margin of <strong>" + r.profitMarginPct.toFixed(1) + "%</strong>. While there is a sale component of <strong>" + formatNumber(r.saleComponentArea) + " sq.ft</strong>, the developer profit of <strong>" + formatCurrency(r.developerProfit) + "</strong> may not be sufficient to cover risks and contingencies. Further detailed analysis is recommended.";
+            conclusionText.innerHTML = "<strong>Risky / Marginally Feasible &#9888;:</strong> The project shows a thin profit margin of <strong>" + r.profitMarginPct.toFixed(1) + "%</strong>. While there is a sale component of <strong>" + formatNumber(r.saleComponentArea) + " sq.ft</strong>, the developer profit of <strong>" + formatCurrency(r.developerProfit) + "</strong> may not be sufficient to cover risks and contingencies. Further detailed analysis and negotiation is recommended.";
         } else {
             conclusionBox.classList.add("not-feasible");
-            conclusionText.innerHTML = "<strong>Not Feasible:</strong> The project shows a negative or very low profit margin of <strong>" + r.profitMarginPct.toFixed(1) + "%</strong>. The estimated developer profit is <strong>" + formatCurrency(r.developerProfit) + "</strong>. The project does not appear financially viable under current parameters.";
+            conclusionText.innerHTML = "<strong>Not Feasible &#10007;:</strong> The project shows a negative or very low profit margin of <strong>" + r.profitMarginPct.toFixed(1) + "%</strong>. The estimated developer profit is <strong>" + formatCurrency(r.developerProfit) + "</strong>. The project does not appear financially viable under current parameters.";
         }
+
+        // Developer Perspective Note
+        var noteBox = document.getElementById("developer-note-box");
+        noteBox.innerHTML = buildDeveloperNote(r);
+    }
+
+    function getFeasibilityBadge(rating) {
+        var cls = rating === "Highly Attractive" ? "rating-high"
+                : rating === "Feasible"          ? "rating-feasible"
+                : "rating-risky";
+        return '<span class="feasibility-rating-badge ' + cls + '">' + rating + '</span>';
+    }
+
+    function buildDeveloperNote(r) {
+        var lines = [];
+        lines.push("<strong>Key observations from a developer's perspective:</strong>");
+        lines.push("<ul>");
+
+        var saleToTotal = r.totalBuildableArea > 0 ? (r.saleComponentArea / r.totalBuildableArea * 100) : 0;
+        var saleComment;
+        if (saleToTotal >= 40) {
+            saleComment = "good commercial headroom.";
+        } else if (saleToTotal >= 30) {
+            saleComment = "moderate commercial headroom.";
+        } else {
+            saleComment = "limited sale inventory; project viability is sensitive to market rates.";
+        }
+        lines.push("<li>Sale component represents <strong>" + saleToTotal.toFixed(1) + "%</strong> of total buildable area – " + saleComment + "</li>");
+
+        lines.push("<li>Net sale revenue after " + (CONFIG.saleDiscount * 100).toFixed(0) + "% discount: <strong>" + formatCurrency(r.saleRevenue) + "</strong> (gross: " + formatCurrency(r.grossSaleRevenue) + ").</li>");
+
+        var costRatio = r.saleRevenue > 0 ? (r.totalProjectCost / r.saleRevenue * 100) : 0;
+        var costComment;
+        if (costRatio < 70) {
+            costComment = "well within acceptable range.";
+        } else if (costRatio < 85) {
+            costComment = "tight; cost overruns could erode margins.";
+        } else {
+            costComment = "very high; project economics are fragile.";
+        }
+        lines.push("<li>Total project cost is <strong>" + costRatio.toFixed(1) + "%</strong> of net sale revenue – " + costComment + "</li>");
+
+        lines.push("<li>Construction + premium charges: <strong>" + formatCurrency(r.constructionCost + r.premiumCharges) + "</strong> (" +
+            (r.saleRevenue > 0 ? ((r.constructionCost + r.premiumCharges) / r.saleRevenue * 100).toFixed(1) : 0) + "% of net revenue).</li>");
+
+        if (CONFIG.includeTransit && r.transitCost > 0) {
+            lines.push("<li>Transit camp cost included: <strong>" + formatCurrency(r.transitCost) + "</strong>.</li>");
+        }
+
+        if (r.profitMarginPct > 35) {
+            lines.push("<li>&#127881; At <strong>" + r.profitMarginPct.toFixed(1) + "%</strong> margin this project offers strong developer returns well above the industry benchmark of 20–25%.</li>");
+        } else if (r.profitMarginPct >= 20) {
+            lines.push("<li>&#9989; Profit margin of <strong>" + r.profitMarginPct.toFixed(1) + "%</strong> meets the industry benchmark of 20–25% for Mumbai redevelopment.</li>");
+        } else if (r.profitMarginPct >= 5) {
+            lines.push("<li>&#9888;&#65039; Margin of <strong>" + r.profitMarginPct.toFixed(1) + "%</strong> is below the 20% benchmark. Consider negotiating plot area, sale rates, or construction costs.</li>");
+        } else {
+            lines.push("<li>&#10060; Margin of <strong>" + r.profitMarginPct.toFixed(1) + "%</strong> is unviable. The project requires significant restructuring of assumptions or a higher-FSI scheme.</li>");
+        }
+
+        lines.push("</ul>");
+        return lines.join("");
     }
 
     // Table row helpers
@@ -449,7 +602,7 @@
             body: [
                 ["Existing FSI", r.existingFSI.toFixed(2)],
                 ["Base Permissible FSI", r.baseFSI.toFixed(2)],
-                ["Fungible FSI (35% Residential)", r.fungibleFSI.toFixed(2)],
+                ["Fungible FSI (" + (CONFIG.fungiblePct * 100).toFixed(0) + "% Residential)", r.fungibleFSI.toFixed(2)],
                 ["TDR Loading", r.tdr.toFixed(2)],
                 ["Total Permissible FSI", r.totalPermissibleFSI.toFixed(2)]
             ],
@@ -473,7 +626,7 @@
             body: [
                 ["Total Buildable Area", formatNumber(r.totalBuildableArea) + " sq.ft"],
                 ["Existing Total Carpet Area", formatNumber(r.existingTotalCarpet) + " sq.ft"],
-                ["Rehab Carpet per Flat (+35%)", formatNumber(r.rehabCarpetPerFlat) + " sq.ft"],
+                ["Rehab Carpet per Flat (+" + (CONFIG.rehabIncrease * 100).toFixed(0) + "%)", formatNumber(r.rehabCarpetPerFlat) + " sq.ft"],
                 ["Total Rehab Carpet Area", formatNumber(r.totalRehabCarpet) + " sq.ft"],
                 ["Total Rehab Built-up Area", formatNumber(r.totalRehabBuiltup) + " sq.ft"],
                 ["Sale Component Area", formatNumber(r.saleComponentArea) + " sq.ft"]
@@ -514,26 +667,66 @@
         y = doc.lastAutoTable.finalY + 10;
 
         // Section 5: Financial Feasibility
+        if (y > 200) { doc.addPage(); y = 20; }
         doc.setFontSize(12);
         doc.setTextColor(26, 82, 118);
         doc.text("5. Financial Feasibility Estimate", margin, y);
         y += 6;
 
+        var financialBody = [
+            ["Gross Sale Revenue", formatCurrency(r.grossSaleRevenue)],
+            ["Sale Discount (" + (CONFIG.saleDiscount * 100).toFixed(0) + "%)", "-" + formatCurrency(r.grossSaleRevenue - r.saleRevenue)],
+            ["Net Sale Revenue", formatCurrency(r.saleRevenue)],
+            ["Construction Cost", formatCurrency(r.constructionCost)],
+            ["Premium & Statutory Charges (" + (CONFIG.premiumPct * 100).toFixed(0) + "%)", formatCurrency(r.premiumCharges)],
+            ["Rent / Alternate Accommodation", formatCurrency(r.rentCost)],
+            ["Corpus Fund", formatCurrency(r.corpusCost)],
+            ["Professional Fees (Architect/PMC, 2%)", formatCurrency(r.professionalFees)],
+            ["Finance Cost (" + (CONFIG.financePct * 100).toFixed(0) + "%)", formatCurrency(r.financeCost)],
+            ["Risk Factor (" + (CONFIG.riskPct * 100).toFixed(0) + "%)", formatCurrency(r.riskCost)]
+        ];
+        if (CONFIG.includeTransit) {
+            financialBody.push(["Transit Camp Cost", formatCurrency(r.transitCost)]);
+        }
+        financialBody.push(["Total Project Cost", formatCurrency(r.totalProjectCost)]);
+        financialBody.push(["Estimated Developer Profit", formatCurrency(r.developerProfit)]);
+        financialBody.push(["Profit Margin (on Net Revenue)", r.profitMarginPct.toFixed(1) + "% – " + r.feasibilityRating]);
+
         doc.autoTable({
             startY: y,
             margin: { left: margin, right: margin },
             head: [["Parameter", "Value"]],
+            body: financialBody,
+            theme: "grid",
+            headStyles: { fillColor: [26, 82, 118] },
+            styles: { fontSize: 9 }
+        });
+
+        y = doc.lastAutoTable.finalY + 10;
+
+        // Section 6: Assumptions Used
+        if (y > 210) { doc.addPage(); y = 20; }
+        doc.setFontSize(12);
+        doc.setTextColor(26, 82, 118);
+        doc.text("6. Assumptions Used", margin, y);
+        y += 6;
+
+        doc.autoTable({
+            startY: y,
+            margin: { left: margin, right: margin },
+            head: [["Assumption", "Value"]],
             body: [
-                ["Sale Revenue", formatCurrency(r.saleRevenue)],
-                ["Construction Cost", formatCurrency(r.totalConstructionCost)],
-                ["Premium & Statutory Charges (10%)", formatCurrency(r.premiumCharges)],
-                ["Rent / Alternate Accommodation", formatCurrency(r.rentCost)],
-                ["Corpus Fund", formatCurrency(r.corpusCost)],
-                ["Professional Fees (Architect/PMC, 2%)", formatCurrency(r.professionalFees)],
-                ["Finance Cost (8%)", formatCurrency(r.financeCost)],
-                ["Total Project Cost", formatCurrency(r.totalProjectCost)],
-                ["Estimated Developer Profit", formatCurrency(r.developerProfit)],
-                ["Profit Margin", r.profitMarginPct.toFixed(1) + "%"]
+                ["Fungible FSI", (CONFIG.fungiblePct * 100).toFixed(0) + "% of base FSI"],
+                ["TDR Loading", CONFIG.tdrLoading.toFixed(2)],
+                ["Rehab Carpet Increase", (CONFIG.rehabIncrease * 100).toFixed(0) + "%"],
+                ["Rent Rate", "\u20B9" + CONFIG.rentRate + " / sq.ft / month"],
+                ["Project Duration", CONFIG.projectDuration + " months"],
+                ["Corpus per Flat", "\u20B9" + formatNumber(CONFIG.corpusPerFlat)],
+                ["Premium Charges", (CONFIG.premiumPct * 100).toFixed(0) + "% of construction cost"],
+                ["Finance Cost", (CONFIG.financePct * 100).toFixed(0) + "% of net sale revenue"],
+                ["Risk Factor", (CONFIG.riskPct * 100).toFixed(0) + "% of net sale revenue"],
+                ["Sale Discount", (CONFIG.saleDiscount * 100).toFixed(0) + "% on gross revenue"],
+                ["Transit Camp", CONFIG.includeTransit ? "Included @ \u20B9" + CONFIG.transitRate + "/sq.ft" : "Not included"]
             ],
             theme: "grid",
             headStyles: { fillColor: [26, 82, 118] },
@@ -548,21 +741,23 @@
             y = 20;
         }
 
-        // Section 6: Conclusion
+        // Section 7: Conclusion
         doc.setFontSize(12);
         doc.setTextColor(26, 82, 118);
-        doc.text("6. Feasibility Conclusion", margin, y);
+        doc.text("7. Feasibility Conclusion", margin, y);
         y += 7;
 
         var conclusionStr;
         if (r.saleComponentArea <= 0) {
             conclusionStr = "NOT FEASIBLE: The total rehab area exceeds the total buildable area. There is no sale component available. The project is not feasible under current parameters.";
+        } else if (r.profitMarginPct > 35) {
+            conclusionStr = "HIGHLY ATTRACTIVE (" + r.profitMarginPct.toFixed(1) + "% margin): The project shows excellent developer returns well above the industry benchmark of 20-25%. Sale component: " + formatNumber(r.saleComponentArea) + " sq.ft. Estimated developer profit: " + formatCurrency(r.developerProfit) + ".";
         } else if (r.profitMarginPct >= 20) {
-            conclusionStr = "FEASIBLE: The project shows a healthy profit margin of " + r.profitMarginPct.toFixed(1) + "%. With a sale component of " + formatNumber(r.saleComponentArea) + " sq.ft and estimated developer profit of " + formatCurrency(r.developerProfit) + ", this redevelopment appears financially viable.";
+            conclusionStr = "FEASIBLE (" + r.profitMarginPct.toFixed(1) + "% margin): The project shows a healthy profit margin meeting the industry benchmark. Sale component: " + formatNumber(r.saleComponentArea) + " sq.ft. Estimated developer profit: " + formatCurrency(r.developerProfit) + ".";
         } else if (r.profitMarginPct >= 5) {
-            conclusionStr = "MARGINALLY FEASIBLE: The project shows a thin profit margin of " + r.profitMarginPct.toFixed(1) + "%. Further detailed analysis is recommended before proceeding.";
+            conclusionStr = "RISKY / MARGINALLY FEASIBLE (" + r.profitMarginPct.toFixed(1) + "% margin): The profit margin is below the 20% benchmark. Developer profit: " + formatCurrency(r.developerProfit) + ". Further detailed analysis and renegotiation of terms is recommended before proceeding.";
         } else {
-            conclusionStr = "NOT FEASIBLE: The project shows a negative or very low profit margin of " + r.profitMarginPct.toFixed(1) + "%. The project does not appear financially viable under current parameters.";
+            conclusionStr = "NOT FEASIBLE (" + r.profitMarginPct.toFixed(1) + "% margin): The project shows a negative or very low profit margin. Developer profit: " + formatCurrency(r.developerProfit) + ". The project does not appear financially viable under current parameters.";
         }
 
         doc.setFontSize(10);
