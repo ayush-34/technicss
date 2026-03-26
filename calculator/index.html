@@ -71,14 +71,23 @@
                          <span class="field-hint">Redevelopment scheme / location zone as per DCPR 2034</span>
                      </div>
 
-                    <div class="form-group">
-                        <label for="num-flats">Number of Existing Flats</label>
-                        <input type="number" id="num-flats" min="1" step="1" placeholder="e.g. 40" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="carpet-area">Existing Carpet Area per Flat (sq.ft)</label>
-                        <input type="number" id="carpet-area" min="0" step="any" placeholder="e.g. 450" required>
+                    <div class="form-group form-group-full">
+                        <label>Existing Flat Types</label>
+                        <div class="flat-types-container">
+                            <table class="flat-types-table" id="flat-types-table">
+                                <thead>
+                                    <tr>
+                                        <th>Carpet Area (sq.ft)</th>
+                                        <th>Number of Flats</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="flat-types-body">
+                                </tbody>
+                            </table>
+                            <button type="button" class="btn-add-flat" id="add-flat-type-btn">+ Add Flat Type</button>
+                        </div>
+                        <span class="field-hint">Add one or more flat types with their carpet area and count</span>
                     </div>
 
                     <div class="form-group">
@@ -159,6 +168,16 @@
                             <span class="field-hint">% of net sale revenue for contingencies, corpus overruns, etc.</span>
                         </div>
                         <div class="form-group">
+                            <label for="cfg-deposit-multiplier">Rent Deposit Multiplier (months)</label>
+                            <input type="number" id="cfg-deposit-multiplier" min="1" max="12" step="1" value="6">
+                            <span class="field-hint">Security deposit = monthly rent × multiplier (typically 3–6 months)</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="cfg-shifting-cost">Shifting Cost per Flat (&#8377;)</label>
+                            <input type="number" id="cfg-shifting-cost" min="0" step="1000" value="50000">
+                            <span class="field-hint">Shifting to transit &amp; back per flat (&#8377;50,000 typical)</span>
+                        </div>
+                        <div class="form-group">
                             <label for="cfg-sale-discount">Sale Discount (%)</label>
                             <input type="number" id="cfg-sale-discount" min="0" max="100" step="0.5" value="10">
                             <span class="field-hint">Loading, negotiation &amp; unsold inventory deduction from gross revenue</span>
@@ -210,6 +229,22 @@
                         <tr>
                             <th>Parameter</th>
                             <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <!-- Flat-wise / Member-wise Carpet Entitlement -->
+            <div class="results-block" id="entitlement-block">
+                <h4>Flat-wise Carpet Entitlement &amp; Member Entitlement</h4>
+                <p class="entitlement-note">Each member will receive a proportionate increase based on their existing carpet area. The table below shows the new rehab carpet area for each flat type.</p>
+                <table class="results-table" id="entitlement-table">
+                    <thead>
+                        <tr>
+                            <th>Existing Carpet (sq.ft)</th>
+                            <th>New Rehab Carpet (sq.ft)</th>
+                            <th>No. of Flats</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
