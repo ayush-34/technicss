@@ -42,20 +42,23 @@
 
     // ---- FSI Rules per DCPR 2034 ----
     function getBaseFSI(roadWidth, zone) {
+        var schemeFSI = {
+            "33_5": 3.5,
+            "33_5_no_mhada_share": 4.0,
+            "33_7": 4.0,
+            "33_9": 4.5,
+            "33_10": 4.0,
+            "33_11": 4.0,
+            "33_19": 4.0,
+            "30a_33_7a": 4.0,
+            "30a_33_7b": 4.0,
+            "30a_33_7a_33_12b": 4.5,
+            "30a_33_7b_33_12b": 4.5,
+            "30a_33_7a_33_20b": 4.5,
+            "30a_33_7b_33_20b": 4.5
+        };
         // Scheme-specific FSI overrides
-        if (zone === "33_5") return 3.5;
-        if (zone === "33_5_no_mhada_share") return 4.0;
-        if (zone === "33_7") return 4.0;
-        if (zone === "33_9") return 4.5;
-        if (zone === "33_10") return 4.0;
-        if (zone === "33_11") return 4.0;
-        if (zone === "33_19") return 4.0;
-        if (zone === "30a_33_7a") return 4.0;
-        if (zone === "30a_33_7b") return 4.0;
-        if (zone === "30a_33_7a_33_12b") return 4.5;
-        if (zone === "30a_33_7b_33_12b") return 4.5;
-        if (zone === "30a_33_7a_33_20b") return 4.5;
-        if (zone === "30a_33_7b_33_20b") return 4.5;
+        if (Object.prototype.hasOwnProperty.call(schemeFSI, zone)) return schemeFSI[zone];
         // Island City norms (33_1 or explicit island-city)
         if (zone === "island-city") {
             if (roadWidth < 9) return 1.33;
