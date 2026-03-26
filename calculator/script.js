@@ -948,19 +948,6 @@
         doc.text(splitConclusion, margin, y);
         y += splitConclusion.length * 5 + 10;
 
-        // Disclaimer
-        if (y > 250) {
-            doc.addPage();
-            y = 20;
-        }
-
-        doc.setFontSize(8);
-        doc.setTextColor(140);
-        var disclaimer = "DISCLAIMER: This is a preliminary estimate based on DCPR 2034 norms and general assumptions. Actual feasibility may vary based on site-specific conditions, regulatory approvals, premium charges, and market conditions. This report does not constitute professional advice. Please consult a qualified structural consultant for a detailed feasibility study.";
-        var splitDisclaimer = doc.splitTextToSize(disclaimer, pageWidth - 2 * margin);
-        doc.text(splitDisclaimer, margin, y);
-        y += splitDisclaimer.length * 4 + 8;
-
         // Footer
         doc.setDrawColor(200);
         doc.setLineWidth(0.3);
