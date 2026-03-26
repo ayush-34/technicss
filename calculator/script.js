@@ -13,18 +13,20 @@
 
     // ---- CONFIG – all editable assumptions ----
     var CONFIG = {
-        fungiblePct:     0.35,   // Fungible FSI as % of base FSI
-        tdrLoading:      0.5,    // TDR applied for eligible plots
-        rehabIncrease:   0.35,   // Rehab carpet increase (35%)
-        rentRate:        80,     // ₹/sq.ft/month alternate accommodation rent
-        projectDuration: 36,     // months
-        corpusPerFlat:   2000000,// ₹ per flat corpus fund
-        premiumPct:      0.15,   // 15% of construction cost
-        financePct:      0.10,   // 10% of net sale revenue
-        riskPct:         0.10,   // 10% of net sale revenue
-        saleDiscount:    0.10,   // 10% discount on gross sale revenue
-        transitRate:     1500,   // ₹/sq.ft for transit camp
-        includeTransit:  false
+        fungiblePct:        0.35,   // Fungible FSI as % of base FSI
+        tdrLoading:         0.5,    // TDR applied for eligible plots
+        rehabIncrease:      0.35,   // Rehab carpet increase (35%)
+        rentRate:           80,     // ₹/sq.ft/month alternate accommodation rent
+        projectDuration:    36,     // months
+        corpusPerFlat:      2000000,// ₹ per flat corpus fund
+        premiumPct:         0.15,   // 15% of construction cost
+        financePct:         0.10,   // 10% of net sale revenue
+        riskPct:            0.10,   // 10% of net sale revenue
+        saleDiscount:       0.10,   // 10% discount on gross sale revenue
+        transitRate:        1500,   // ₹/sq.ft for transit camp
+        includeTransit:     false,
+        depositMultiplier:  6,      // security deposit = X months of monthly rent
+        shiftingCostPerFlat:50000   // ₹ per flat for shifting charges
     };
 
     // ---- Read CONFIG from Settings UI ----
@@ -47,8 +49,10 @@
         CONFIG.financePct      = pct("cfg-finance-pct");
         CONFIG.riskPct         = pct("cfg-risk-pct");
         CONFIG.saleDiscount    = pct("cfg-sale-discount");
-        CONFIG.transitRate     = num("cfg-transit-rate");
-        CONFIG.includeTransit  = document.getElementById("cfg-transit-camp").checked;
+        CONFIG.transitRate        = num("cfg-transit-rate");
+        CONFIG.includeTransit     = document.getElementById("cfg-transit-camp").checked;
+        CONFIG.depositMultiplier  = num("cfg-deposit-multiplier");
+        CONFIG.shiftingCostPerFlat= num("cfg-shifting-cost");
     }
 
     var SCHEME_BASE_FSI = {
@@ -153,6 +157,53 @@
         });
     }
 
+    // ---- Flat-type Row Management ----
+    function addFlatTypeRow(carpet, count) {
+        var tbody = document.getElementById("flat-types-body");
+        var tr = document.createElement("tr");
+
+        var carpetTd = document.createElement("td");
+        var carpetInput = document.createElement("input");
+        carpetInput.type = "number";
+        carpetInput.className = "flat-carpet";
+        carpetInput.min = "1";
+        carpetInput.step = "any";
+        carpetInput.placeholder = "e.g. 450";
+        if (carpet != null) { carpetInput.value = carpet; }
+        carpetTd.appendChild(carpetInput);
+
+        var countTd = document.createElement("td");
+        var countInput = document.createElement("input");
+        countInput.type = "number";
+        countInput.className = "flat-count";
+        countInput.min = "1";
+        countInput.step = "1";
+        countInput.placeholder = "e.g. 10";
+        if (count != null) { countInput.value = count; }
+        countTd.appendChild(countInput);
+
+        var deleteTd = document.createElement("td");
+        var deleteBtn = document.createElement("button");
+        deleteBtn.type = "button";
+        deleteBtn.className = "btn-delete-flat";
+        deleteBtn.title = "Remove row";
+        deleteBtn.textContent = "\u2715";
+        deleteBtn.addEventListener("click", function () { tr.remove(); });
+        deleteTd.appendChild(deleteBtn);
+
+        tr.appendChild(carpetTd);
+        tr.appendChild(countTd);
+        tr.appendChild(deleteTd);
+        tbody.appendChild(tr);
+    }
+
+    // Initialize with one empty row
+    addFlatTypeRow();
+
+    document.getElementById("add-flat-type-btn").addEventListener("click", function () {
+        addFlatTypeRow();
+    });
+
     // Store last results for PDF
     var lastResults = null;
     var lastInputs = null;
@@ -185,7 +236,7 @@
     // ---- Form Validation ----
     function validateForm() {
         var valid = true;
-        var fields = ["plot-area", "road-width", "num-flats", "carpet-area", "existing-builtup", "num-buildings", "building-age", "market-rate"];
+        var fields = ["plot-area", "road-width", "existing-builtup", "num-buildings", "building-age", "market-rate"];
 
         fields.forEach(function (id) {
             var input = document.getElementById(id);
@@ -198,6 +249,33 @@
             }
         });
 
+        // Validate flat-type rows
+        var flatRows = document.querySelectorAll("#flat-types-body tr");
+        if (flatRows.length === 0) {
+            document.getElementById("flat-types-table").classList.add("error");
+            valid = false;
+        } else {
+            document.getElementById("flat-types-table").classList.remove("error");
+            flatRows.forEach(function (r) {
+                var carpetInput = r.querySelector(".flat-carpet");
+                var countInput = r.querySelector(".flat-count");
+                var carpet = parseFloat(carpetInput.value);
+                var count = parseInt(countInput.value, 10);
+                if (!carpet || carpet <= 0) {
+                    carpetInput.classList.add("error");
+                    valid = false;
+                } else {
+                    carpetInput.classList.remove("error");
+                }
+                if (!count || count < 1) {
+                    countInput.classList.add("error");
+                    valid = false;
+                } else {
+                    countInput.classList.remove("error");
+                }
+            });
+        }
+
         return valid;
     }
 
@@ -206,80 +284,100 @@
         // Read settings before computing
         readConfig();
 
-        // Gather inputs
-        var plotAreaRaw = parseFloat(document.getElementById("plot-area").value);
-        var plotAreaUnitVal = plotAreaUnit.value;
-        var roadWidth = parseFloat(document.getElementById("road-width").value);
-        var zone = document.getElementById("zone").value;
-        var numFlats = parseInt(document.getElementById("num-flats").value, 10);
-        var carpetAreaPerFlat = parseFloat(document.getElementById("carpet-area").value);
-        var existingBuiltup = parseFloat(document.getElementById("existing-builtup").value);
-        var numBuildings = parseInt(document.getElementById("num-buildings").value, 10);
-        var buildingAge = parseInt(document.getElementById("building-age").value, 10);
-        var marketRate = parseFloat(document.getElementById("market-rate").value);
+        // Gather flat-type inputs
+        var flatTypes = [];
+        document.querySelectorAll("#flat-types-body tr").forEach(function (r) {
+            var carpet = parseFloat(r.querySelector(".flat-carpet").value);
+            var count  = parseInt(r.querySelector(".flat-count").value, 10);
+            if (carpet > 0 && count > 0) {
+                flatTypes.push({ carpet: carpet, count: count });
+            }
+        });
+        var numFlats = flatTypes.reduce(function (s, ft) { return s + ft.count; }, 0);
+        var existingTotalCarpet = flatTypes.reduce(function (s, ft) { return s + ft.carpet * ft.count; }, 0);
+
+        // Gather other inputs
+        var plotAreaRaw      = parseFloat(document.getElementById("plot-area").value);
+        var plotAreaUnitVal  = plotAreaUnit.value;
+        var roadWidth        = parseFloat(document.getElementById("road-width").value);
+        var zone             = document.getElementById("zone").value;
+        var existingBuiltup  = parseFloat(document.getElementById("existing-builtup").value);
+        var numBuildings     = parseInt(document.getElementById("num-buildings").value, 10);
+        var buildingAge      = parseInt(document.getElementById("building-age").value, 10);
+        var marketRate       = parseFloat(document.getElementById("market-rate").value);
         var constructionRate = parseFloat(document.getElementById("construction-cost").value) || 4000;
 
-        // Convert plot area to sq.ft for calculations
+        // Convert plot area to sq.ft
         var plotAreaSqFt = plotAreaUnitVal === "sqm" ? plotAreaRaw * SQM_TO_SQFT : plotAreaRaw;
-        var plotAreaSqM = plotAreaUnitVal === "sqm" ? plotAreaRaw : plotAreaRaw / SQM_TO_SQFT;
+        var plotAreaSqM  = plotAreaUnitVal === "sqm" ? plotAreaRaw : plotAreaRaw / SQM_TO_SQFT;
+
+        // Rehab flat types (per-type new carpet)
+        var rehabFlatTypes = flatTypes.map(function (ft) {
+            return {
+                existingCarpet: ft.carpet,
+                newCarpet: ft.carpet * (1 + CONFIG.rehabIncrease),
+                count: ft.count
+            };
+        });
 
         // Save inputs for PDF
         lastInputs = {
-            plotAreaRaw: plotAreaRaw,
-            plotAreaUnit: plotAreaUnitVal,
-            plotAreaSqFt: plotAreaSqFt,
-            plotAreaSqM: plotAreaSqM,
-            roadWidth: roadWidth,
-            zone: zone,
-            numFlats: numFlats,
-            carpetAreaPerFlat: carpetAreaPerFlat,
-            existingBuiltup: existingBuiltup,
-            numBuildings: numBuildings,
-            buildingAge: buildingAge,
-            marketRate: marketRate,
-            constructionCost: constructionRate
+            plotAreaRaw:        plotAreaRaw,
+            plotAreaUnit:       plotAreaUnitVal,
+            plotAreaSqFt:       plotAreaSqFt,
+            plotAreaSqM:        plotAreaSqM,
+            roadWidth:          roadWidth,
+            zone:               zone,
+            numFlats:           numFlats,
+            flatTypes:          flatTypes,
+            existingTotalCarpet:existingTotalCarpet,
+            existingBuiltup:    existingBuiltup,
+            numBuildings:       numBuildings,
+            buildingAge:        buildingAge,
+            marketRate:         marketRate,
+            constructionCost:   constructionRate
         };
 
         // FSI Calculations
-        var existingFSI = existingBuiltup / plotAreaSqFt;
-        var baseFSI = getBaseFSI(roadWidth, zone);
-        var fungibleFSI = baseFSI * CONFIG.fungiblePct;
-        var tdr = getTDR(roadWidth, zone);
-        var totalPermissibleFSI = baseFSI + fungibleFSI + tdr;
+        var existingFSI          = existingBuiltup / plotAreaSqFt;
+        var baseFSI              = getBaseFSI(roadWidth, zone);
+        var fungibleFSI          = baseFSI * CONFIG.fungiblePct;
+        var tdr                  = getTDR(roadWidth, zone);
+        var totalPermissibleFSI  = baseFSI + fungibleFSI + tdr;
 
         // Area Calculations
-        var totalBuildableArea = totalPermissibleFSI * plotAreaSqFt;
-        var existingTotalCarpet = numFlats * carpetAreaPerFlat;
-        var rehabCarpetPerFlat = carpetAreaPerFlat * (1 + CONFIG.rehabIncrease);
-        var totalRehabCarpet = numFlats * rehabCarpetPerFlat;
-        var totalRehabBuiltup = totalRehabCarpet * CARPET_TO_BUILTUP_FACTOR;
-        var saleComponentArea = totalBuildableArea - totalRehabBuiltup;
+        var totalBuildableArea   = totalPermissibleFSI * plotAreaSqFt;
+        var totalRehabCarpet     = rehabFlatTypes.reduce(function (s, ft) { return s + ft.newCarpet * ft.count; }, 0);
+        var totalRehabBuiltup    = totalRehabCarpet * CARPET_TO_BUILTUP_FACTOR;
+        var saleComponentArea    = totalBuildableArea - totalRehabBuiltup;
         if (saleComponentArea < 0) saleComponentArea = 0;
 
-        // Financial Calculations (realistic model)
-        // Effective sale revenue: apply discount for loading, negotiation, unsold inventory
+        // Financial Calculations
         var grossSaleRevenue = saleComponentArea * marketRate;
-        var saleRevenue = grossSaleRevenue * (1 - CONFIG.saleDiscount);
+        var saleRevenue      = grossSaleRevenue * (1 - CONFIG.saleDiscount);
 
         // Costs
-        var constructionCost = totalBuildableArea * constructionRate;
-        var premiumCharges = constructionCost * CONFIG.premiumPct;
-        var rentCost = totalRehabCarpet * CONFIG.rentRate * CONFIG.projectDuration;
-        var corpusCost = numFlats * CONFIG.corpusPerFlat;
-        var professionalFees = saleRevenue * 0.02;
-        var financeCost = saleRevenue * CONFIG.financePct;
-        var riskCost = saleRevenue * CONFIG.riskPct;
-        var transitCost = CONFIG.includeTransit ? totalRehabCarpet * CONFIG.transitRate : 0;
+        var constructionCost  = totalBuildableArea * constructionRate;
+        var premiumCharges    = constructionCost * CONFIG.premiumPct;
+        var monthlyRentCost   = totalRehabCarpet * CONFIG.rentRate;
+        var rentCost          = monthlyRentCost * CONFIG.projectDuration;
+        var rentDeposit       = monthlyRentCost * CONFIG.depositMultiplier;
+        var shiftingCost      = numFlats * CONFIG.shiftingCostPerFlat;
+        var corpusCost        = numFlats * CONFIG.corpusPerFlat;
+        var professionalFees  = saleRevenue * 0.02;
+        var financeCost       = saleRevenue * CONFIG.financePct;
+        var riskCost          = saleRevenue * CONFIG.riskPct;
+        var transitCost       = CONFIG.includeTransit ? totalRehabCarpet * CONFIG.transitRate : 0;
 
-        var totalProjectCost = constructionCost + premiumCharges + rentCost + corpusCost +
-            professionalFees + financeCost + riskCost + transitCost;
+        var totalProjectCost  = constructionCost + premiumCharges + rentCost + rentDeposit +
+            shiftingCost + corpusCost + professionalFees + financeCost + riskCost + transitCost;
 
-        var developerProfit = saleRevenue - totalProjectCost;
-        var profitMarginPct = saleRevenue > 0 ? (developerProfit / saleRevenue) * 100 : 0;
+        var developerProfit   = saleRevenue - totalProjectCost;
+        var profitMarginPct   = saleRevenue > 0 ? (developerProfit / saleRevenue) * 100 : 0;
 
         // Rehab vs Sale percentages
         var rehabPct = totalBuildableArea > 0 ? (totalRehabBuiltup / totalBuildableArea) * 100 : 0;
-        var salePct = totalBuildableArea > 0 ? (saleComponentArea / totalBuildableArea) * 100 : 0;
+        var salePct  = totalBuildableArea > 0 ? (saleComponentArea / totalBuildableArea) * 100 : 0;
 
         // Feasibility rating
         var feasibilityRating;
@@ -295,33 +393,35 @@
 
         // Store results
         lastResults = {
-            existingFSI: existingFSI,
-            baseFSI: baseFSI,
-            fungibleFSI: fungibleFSI,
-            tdr: tdr,
+            existingFSI:         existingFSI,
+            baseFSI:             baseFSI,
+            fungibleFSI:         fungibleFSI,
+            tdr:                 tdr,
             totalPermissibleFSI: totalPermissibleFSI,
-            totalBuildableArea: totalBuildableArea,
+            totalBuildableArea:  totalBuildableArea,
             existingTotalCarpet: existingTotalCarpet,
-            rehabCarpetPerFlat: rehabCarpetPerFlat,
-            totalRehabCarpet: totalRehabCarpet,
-            totalRehabBuiltup: totalRehabBuiltup,
-            saleComponentArea: saleComponentArea,
-            grossSaleRevenue: grossSaleRevenue,
-            saleRevenue: saleRevenue,
-            constructionCost: constructionCost,
-            premiumCharges: premiumCharges,
-            rentCost: rentCost,
-            corpusCost: corpusCost,
-            professionalFees: professionalFees,
-            financeCost: financeCost,
-            riskCost: riskCost,
-            transitCost: transitCost,
-            totalProjectCost: totalProjectCost,
-            developerProfit: developerProfit,
-            profitMarginPct: profitMarginPct,
-            rehabPct: rehabPct,
-            salePct: salePct,
-            feasibilityRating: feasibilityRating
+            rehabFlatTypes:      rehabFlatTypes,
+            totalRehabCarpet:    totalRehabCarpet,
+            totalRehabBuiltup:   totalRehabBuiltup,
+            saleComponentArea:   saleComponentArea,
+            grossSaleRevenue:    grossSaleRevenue,
+            saleRevenue:         saleRevenue,
+            constructionCost:    constructionCost,
+            premiumCharges:      premiumCharges,
+            rentCost:            rentCost,
+            rentDeposit:         rentDeposit,
+            shiftingCost:        shiftingCost,
+            corpusCost:          corpusCost,
+            professionalFees:    professionalFees,
+            financeCost:         financeCost,
+            riskCost:            riskCost,
+            transitCost:         transitCost,
+            totalProjectCost:    totalProjectCost,
+            developerProfit:     developerProfit,
+            profitMarginPct:     profitMarginPct,
+            rehabPct:            rehabPct,
+            salePct:             salePct,
+            feasibilityRating:   feasibilityRating
         };
 
         return lastResults;
@@ -329,12 +429,12 @@
 
     // ---- Render Results ----
     function renderResults(r) {
-        var fungiblePctDisplay = (CONFIG.fungiblePct * 100).toFixed(0);
+        var fungiblePctDisplay      = (CONFIG.fungiblePct * 100).toFixed(0);
         var rehabIncreasePctDisplay = (CONFIG.rehabIncrease * 100).toFixed(0);
-        var saleDiscountPctDisplay = (CONFIG.saleDiscount * 100).toFixed(0);
-        var premiumPctDisplay = (CONFIG.premiumPct * 100).toFixed(0);
-        var financePctDisplay = (CONFIG.financePct * 100).toFixed(0);
-        var riskPctDisplay = (CONFIG.riskPct * 100).toFixed(0);
+        var saleDiscountPctDisplay  = (CONFIG.saleDiscount * 100).toFixed(0);
+        var premiumPctDisplay       = (CONFIG.premiumPct * 100).toFixed(0);
+        var financePctDisplay       = (CONFIG.financePct * 100).toFixed(0);
+        var riskPctDisplay          = (CONFIG.riskPct * 100).toFixed(0);
 
         // FSI Table
         var fsiBody = document.querySelector("#fsi-table tbody");
@@ -351,13 +451,28 @@
         areaBody.innerHTML = [
             row("Plot Area", formatNumber(lastInputs.plotAreaSqFt) + " sq.ft (" + formatNumber(lastInputs.plotAreaSqM) + " sq.m)"),
             row("Existing Total Built-up Area", formatNumber(lastInputs.existingBuiltup) + " sq.ft"),
-            row("Existing Total Carpet Area (" + lastInputs.numFlats + " flats)", formatNumber(r.existingTotalCarpet) + " sq.ft"),
+            row("Total Existing Carpet Area (" + lastInputs.numFlats + " flats)", formatNumber(r.existingTotalCarpet) + " sq.ft"),
             rowHighlight("Total Buildable Area", formatNumber(r.totalBuildableArea) + " sq.ft"),
-            row("Rehab Carpet per Flat (+" + rehabIncreasePctDisplay + "%)", formatNumber(r.rehabCarpetPerFlat) + " sq.ft"),
-            row("Total Rehab Carpet Area", formatNumber(r.totalRehabCarpet) + " sq.ft"),
+            row("Total Rehab Carpet Area (+" + rehabIncreasePctDisplay + "% increase)", formatNumber(r.totalRehabCarpet) + " sq.ft"),
             row("Total Rehab Built-up Area", formatNumber(r.totalRehabBuiltup) + " sq.ft"),
             rowHighlight("Sale Component Area", formatNumber(r.saleComponentArea) + " sq.ft")
         ].join("");
+
+        // Flat-wise Entitlement Table
+        var entBody = document.querySelector("#entitlement-table tbody");
+        var entRows = r.rehabFlatTypes.map(function (ft) {
+            return row3(
+                formatNumber(ft.existingCarpet) + " sq.ft",
+                formatNumber(ft.newCarpet) + " sq.ft",
+                ft.count.toString()
+            );
+        });
+        entRows.push(row3Highlight(
+            "Total: " + formatNumber(r.existingTotalCarpet) + " sq.ft",
+            "Total: " + formatNumber(r.totalRehabCarpet) + " sq.ft",
+            lastInputs.numFlats.toString()
+        ));
+        entBody.innerHTML = entRows.join("");
 
         // Component Bar
         document.getElementById("bar-rehab").style.width = r.rehabPct.toFixed(1) + "%";
@@ -376,19 +491,21 @@
         // Financial Table
         var finBody = document.querySelector("#financial-table tbody");
         var transitRow = CONFIG.includeTransit
-            ? row("Transit Camp Cost (" + formatNumber(r.totalRehabCarpet) + " sq.ft × ₹" + formatNumber(CONFIG.transitRate) + ")", formatCurrency(r.transitCost))
+            ? row("Transit Camp Cost (" + formatNumber(r.totalRehabCarpet) + " sq.ft \u00d7 \u20b9" + formatNumber(CONFIG.transitRate) + ")", formatCurrency(r.transitCost))
             : "";
         finBody.innerHTML = [
-            row("Gross Sale Revenue (" + formatNumber(r.saleComponentArea) + " sq.ft × ₹" + formatNumber(lastInputs.marketRate) + ")", formatCurrency(r.grossSaleRevenue)),
-            row("Sale Discount (" + saleDiscountPctDisplay + "% – loading / negotiation / unsold)", "–" + formatCurrency(r.grossSaleRevenue - r.saleRevenue)),
+            row("Gross Sale Revenue (" + formatNumber(r.saleComponentArea) + " sq.ft \u00d7 \u20b9" + formatNumber(lastInputs.marketRate) + ")", formatCurrency(r.grossSaleRevenue)),
+            row("Sale Discount (" + saleDiscountPctDisplay + "% \u2013 loading / negotiation / unsold)", "\u2013" + formatCurrency(r.grossSaleRevenue - r.saleRevenue)),
             rowHighlight("Net Sale Revenue", formatCurrency(r.saleRevenue)),
-            row("Construction Cost (" + formatNumber(r.totalBuildableArea) + " sq.ft × ₹" + formatNumber(lastInputs.constructionCost) + ")", formatCurrency(r.constructionCost)),
+            row("Construction Cost (" + formatNumber(r.totalBuildableArea) + " sq.ft \u00d7 \u20b9" + formatNumber(lastInputs.constructionCost) + ")", formatCurrency(r.constructionCost)),
             row("Premium & Statutory Charges (" + premiumPctDisplay + "%)", formatCurrency(r.premiumCharges)),
-            row("Rent / Alternate Accommodation (" + lastInputs.numFlats + " flats × " + CONFIG.projectDuration + " months)", formatCurrency(r.rentCost)),
-            row("Corpus Fund (₹" + formatNumber(CONFIG.corpusPerFlat / 100000) + "L × " + lastInputs.numFlats + " flats)", formatCurrency(r.corpusCost)),
+            row("Rent / Alternate Accommodation (" + lastInputs.numFlats + " flats \u00d7 " + CONFIG.projectDuration + " months)", formatCurrency(r.rentCost)),
+            row("Rent Deposit / Security Deposit (" + CONFIG.depositMultiplier + " months)", formatCurrency(r.rentDeposit)),
+            row("Shifting / Transportation Charges (" + lastInputs.numFlats + " flats \u00d7 \u20b9" + formatNumber(CONFIG.shiftingCostPerFlat) + ")", formatCurrency(r.shiftingCost)),
+            row("Corpus Fund (\u20b9" + formatNumber(CONFIG.corpusPerFlat / 100000) + "L \u00d7 " + lastInputs.numFlats + " flats)", formatCurrency(r.corpusCost)),
             row("Professional Fees (Architect/PMC, 2%)", formatCurrency(r.professionalFees)),
             row("Finance Cost (" + financePctDisplay + "%)", formatCurrency(r.financeCost)),
-            row("Risk Factor (" + riskPctDisplay + "% – contingencies, corpus overruns, etc.)", formatCurrency(r.riskCost)),
+            row("Risk Factor (" + riskPctDisplay + "% \u2013 contingencies, corpus overruns, etc.)", formatCurrency(r.riskCost)),
             transitRow,
             row("Total Project Cost", formatCurrency(r.totalProjectCost)),
             rowHighlight("Estimated Developer Profit", formatCurrency(r.developerProfit)),
@@ -515,6 +632,10 @@
         inputs.forEach(function (input) {
             input.classList.remove("error");
         });
+        // Clear and re-initialize the flat-types table
+        var tbody = document.getElementById("flat-types-body");
+        tbody.innerHTML = "";
+        addFlatTypeRow();
         lastResults = null;
         lastInputs = null;
     });
@@ -566,22 +687,47 @@
         doc.text("1. Project Inputs", margin, y);
         y += 6;
 
+        var inputBody = [
+            ["Plot Area", formatNumber(inputs.plotAreaSqFt) + " sq.ft (" + formatNumber(inputs.plotAreaSqM) + " sq.m)"],
+            ["Road Width", inputs.roadWidth + " m"],
+            ["Zone / Scheme", getZoneLabel(inputs.zone)],
+            ["Number of Existing Flats", inputs.numFlats.toString()],
+            ["Total Existing Carpet Area", formatNumber(inputs.existingTotalCarpet) + " sq.ft"],
+            ["Existing Total Built-up Area", formatNumber(inputs.existingBuiltup) + " sq.ft"],
+            ["Number of Buildings", inputs.numBuildings.toString()],
+            ["Building Age", inputs.buildingAge + " years"],
+            ["Market Sale Rate", "\u20B9" + formatNumber(inputs.marketRate) + " / sq.ft"],
+            ["Construction Cost", "\u20B9" + formatNumber(inputs.constructionCost) + " / sq.ft"]
+        ];
+
         doc.autoTable({
             startY: y,
             margin: { left: margin, right: margin },
             head: [["Parameter", "Value"]],
-            body: [
-                ["Plot Area", formatNumber(inputs.plotAreaSqFt) + " sq.ft (" + formatNumber(inputs.plotAreaSqM) + " sq.m)"],
-                ["Road Width", inputs.roadWidth + " m"],
-                ["Zone / Scheme", getZoneLabel(inputs.zone)],
-                ["Number of Existing Flats", inputs.numFlats.toString()],
-                ["Existing Carpet Area per Flat", formatNumber(inputs.carpetAreaPerFlat) + " sq.ft"],
-                ["Existing Total Built-up Area", formatNumber(inputs.existingBuiltup) + " sq.ft"],
-                ["Number of Buildings", inputs.numBuildings.toString()],
-                ["Building Age", inputs.buildingAge + " years"],
-                ["Market Sale Rate", "\u20B9" + formatNumber(inputs.marketRate) + " / sq.ft"],
-                ["Construction Cost", "\u20B9" + formatNumber(inputs.constructionCost) + " / sq.ft"]
-            ],
+            body: inputBody,
+            theme: "grid",
+            headStyles: { fillColor: [26, 82, 118] },
+            styles: { fontSize: 9 }
+        });
+
+        y = doc.lastAutoTable.finalY + 6;
+
+        // Section 1a: Flat Types
+        doc.setFontSize(11);
+        doc.setTextColor(26, 82, 118);
+        doc.text("1a. Existing Flat Types", margin, y);
+        y += 5;
+
+        var flatTypeBody = inputs.flatTypes.map(function (ft) {
+            return [formatNumber(ft.carpet) + " sq.ft", ft.count.toString()];
+        });
+        flatTypeBody.push(["Total Flats", inputs.numFlats.toString()]);
+
+        doc.autoTable({
+            startY: y,
+            margin: { left: margin, right: margin },
+            head: [["Carpet Area", "No. of Flats"]],
+            body: flatTypeBody,
             theme: "grid",
             headStyles: { fillColor: [26, 82, 118] },
             styles: { fontSize: 9 }
@@ -590,6 +736,7 @@
         y = doc.lastAutoTable.finalY + 10;
 
         // Section 2: FSI Calculations
+        if (y > 230) { doc.addPage(); y = 20; }
         doc.setFontSize(12);
         doc.setTextColor(26, 82, 118);
         doc.text("2. FSI Calculations", margin, y);
@@ -614,6 +761,7 @@
         y = doc.lastAutoTable.finalY + 10;
 
         // Section 3: Area Calculations
+        if (y > 230) { doc.addPage(); y = 20; }
         doc.setFontSize(12);
         doc.setTextColor(26, 82, 118);
         doc.text("3. Area Calculations", margin, y);
@@ -625,9 +773,8 @@
             head: [["Parameter", "Value"]],
             body: [
                 ["Total Buildable Area", formatNumber(r.totalBuildableArea) + " sq.ft"],
-                ["Existing Total Carpet Area", formatNumber(r.existingTotalCarpet) + " sq.ft"],
-                ["Rehab Carpet per Flat (+" + (CONFIG.rehabIncrease * 100).toFixed(0) + "%)", formatNumber(r.rehabCarpetPerFlat) + " sq.ft"],
-                ["Total Rehab Carpet Area", formatNumber(r.totalRehabCarpet) + " sq.ft"],
+                ["Total Existing Carpet Area", formatNumber(r.existingTotalCarpet) + " sq.ft"],
+                ["Total Rehab Carpet Area (+" + (CONFIG.rehabIncrease * 100).toFixed(0) + "%)", formatNumber(r.totalRehabCarpet) + " sq.ft"],
                 ["Total Rehab Built-up Area", formatNumber(r.totalRehabBuiltup) + " sq.ft"],
                 ["Sale Component Area", formatNumber(r.saleComponentArea) + " sq.ft"]
             ],
@@ -638,16 +785,47 @@
 
         y = doc.lastAutoTable.finalY + 10;
 
-        // Check page overflow
-        if (y > 230) {
-            doc.addPage();
-            y = 20;
-        }
-
-        // Section 4: Rehab vs Sale
+        // Section 4: Flat-wise / Member-wise Carpet Entitlement
+        if (y > 220) { doc.addPage(); y = 20; }
         doc.setFontSize(12);
         doc.setTextColor(26, 82, 118);
-        doc.text("4. Rehab vs Sale Component", margin, y);
+        doc.text("4. Flat-wise Carpet Entitlement & Member Entitlement", margin, y);
+        y += 5;
+        doc.setFontSize(8);
+        doc.setTextColor(107, 114, 128);
+        doc.text("Each member receives proportionate increase based on existing carpet area.", margin, y);
+        y += 6;
+
+        var entBody = r.rehabFlatTypes.map(function (ft) {
+            return [
+                formatNumber(ft.existingCarpet) + " sq.ft",
+                formatNumber(ft.newCarpet) + " sq.ft",
+                ft.count.toString()
+            ];
+        });
+        entBody.push([
+            "Total: " + formatNumber(r.existingTotalCarpet) + " sq.ft",
+            "Total: " + formatNumber(r.totalRehabCarpet) + " sq.ft",
+            inputs.numFlats.toString()
+        ]);
+
+        doc.autoTable({
+            startY: y,
+            margin: { left: margin, right: margin },
+            head: [["Existing Carpet (sq.ft)", "New Rehab Carpet (sq.ft)", "No. of Flats"]],
+            body: entBody,
+            theme: "grid",
+            headStyles: { fillColor: [26, 82, 118] },
+            styles: { fontSize: 9 }
+        });
+
+        y = doc.lastAutoTable.finalY + 10;
+
+        // Section 5: Rehab vs Sale
+        if (y > 220) { doc.addPage(); y = 20; }
+        doc.setFontSize(12);
+        doc.setTextColor(26, 82, 118);
+        doc.text("5. Rehab vs Sale Component", margin, y);
         y += 6;
 
         doc.autoTable({
@@ -666,11 +844,11 @@
 
         y = doc.lastAutoTable.finalY + 10;
 
-        // Section 5: Financial Feasibility
+        // Section 6: Financial Feasibility
         if (y > 200) { doc.addPage(); y = 20; }
         doc.setFontSize(12);
         doc.setTextColor(26, 82, 118);
-        doc.text("5. Financial Feasibility Estimate", margin, y);
+        doc.text("6. Financial Feasibility Estimate", margin, y);
         y += 6;
 
         var financialBody = [
@@ -680,6 +858,8 @@
             ["Construction Cost", formatCurrency(r.constructionCost)],
             ["Premium & Statutory Charges (" + (CONFIG.premiumPct * 100).toFixed(0) + "%)", formatCurrency(r.premiumCharges)],
             ["Rent / Alternate Accommodation", formatCurrency(r.rentCost)],
+            ["Rent Deposit / Security Deposit (" + CONFIG.depositMultiplier + " months)", formatCurrency(r.rentDeposit)],
+            ["Shifting / Transportation Charges", formatCurrency(r.shiftingCost)],
             ["Corpus Fund", formatCurrency(r.corpusCost)],
             ["Professional Fees (Architect/PMC, 2%)", formatCurrency(r.professionalFees)],
             ["Finance Cost (" + (CONFIG.financePct * 100).toFixed(0) + "%)", formatCurrency(r.financeCost)],
@@ -690,7 +870,7 @@
         }
         financialBody.push(["Total Project Cost", formatCurrency(r.totalProjectCost)]);
         financialBody.push(["Estimated Developer Profit", formatCurrency(r.developerProfit)]);
-        financialBody.push(["Profit Margin (on Net Revenue)", r.profitMarginPct.toFixed(1) + "% – " + r.feasibilityRating]);
+        financialBody.push(["Profit Margin (on Net Revenue)", r.profitMarginPct.toFixed(1) + "% \u2013 " + r.feasibilityRating]);
 
         doc.autoTable({
             startY: y,
@@ -704,11 +884,11 @@
 
         y = doc.lastAutoTable.finalY + 10;
 
-        // Section 6: Assumptions Used
+        // Section 7: Assumptions Used
         if (y > 210) { doc.addPage(); y = 20; }
         doc.setFontSize(12);
         doc.setTextColor(26, 82, 118);
-        doc.text("6. Assumptions Used", margin, y);
+        doc.text("7. Assumptions Used", margin, y);
         y += 6;
 
         doc.autoTable({
@@ -721,6 +901,8 @@
                 ["Rehab Carpet Increase", (CONFIG.rehabIncrease * 100).toFixed(0) + "%"],
                 ["Rent Rate", "\u20B9" + CONFIG.rentRate + " / sq.ft / month"],
                 ["Project Duration", CONFIG.projectDuration + " months"],
+                ["Rent Deposit Multiplier", CONFIG.depositMultiplier + " months"],
+                ["Shifting Cost per Flat", "\u20B9" + formatNumber(CONFIG.shiftingCostPerFlat)],
                 ["Corpus per Flat", "\u20B9" + formatNumber(CONFIG.corpusPerFlat)],
                 ["Premium Charges", (CONFIG.premiumPct * 100).toFixed(0) + "% of construction cost"],
                 ["Finance Cost", (CONFIG.financePct * 100).toFixed(0) + "% of net sale revenue"],
@@ -741,10 +923,10 @@
             y = 20;
         }
 
-        // Section 7: Conclusion
+        // Section 8: Conclusion
         doc.setFontSize(12);
         doc.setTextColor(26, 82, 118);
-        doc.text("7. Feasibility Conclusion", margin, y);
+        doc.text("8. Feasibility Conclusion", margin, y);
         y += 7;
 
         var conclusionStr;

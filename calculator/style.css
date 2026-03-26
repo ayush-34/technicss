@@ -397,6 +397,119 @@ body {
     display: none !important;
 }
 
+/* --- Full-width form group --- */
+.form-group-full {
+    grid-column: 1 / -1;
+}
+
+/* --- Flat Types Table --- */
+.flat-types-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.flat-types-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 10px;
+}
+
+.flat-types-table th {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--gray-800);
+    padding: 8px 10px;
+    border-bottom: 1.5px solid var(--gray-200);
+    text-align: left;
+}
+
+.flat-types-table td {
+    padding: 6px 8px;
+}
+
+.flat-types-table td input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1.5px solid var(--gray-200);
+    border-radius: var(--radius);
+    font-size: 0.92rem;
+    font-family: var(--font);
+    color: var(--gray-800);
+    background: var(--gray-50);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.flat-types-table td input:focus {
+    outline: none;
+    border-color: var(--primary-light);
+    box-shadow: 0 0 0 3px rgba(41, 128, 185, 0.15);
+}
+
+.flat-types-table td input.error {
+    border-color: var(--danger);
+}
+
+.btn-delete-flat {
+    background: none;
+    border: 1.5px solid var(--danger);
+    color: var(--danger);
+    cursor: pointer;
+    font-size: 0.82rem;
+    padding: 5px 10px;
+    border-radius: var(--radius);
+    font-family: var(--font);
+    transition: background 0.2s;
+}
+
+.btn-delete-flat:hover {
+    background: #fdecea;
+}
+
+.flat-types-table.error {
+    outline: 2px solid var(--danger);
+    border-radius: var(--radius);
+}
+
+.btn-add-flat {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 18px;
+    background: var(--primary);
+    color: var(--white);
+    border: none;
+    border-radius: var(--radius);
+    font-size: 0.88rem;
+    font-weight: 600;
+    font-family: var(--font);
+    cursor: pointer;
+    transition: background 0.2s;
+    align-self: flex-start;
+}
+
+.btn-add-flat:hover {
+    background: var(--primary-light);
+}
+
+/* --- Entitlement Table --- */
+.entitlement-note {
+    font-size: 0.88rem;
+    color: var(--gray-600);
+    margin-bottom: 12px;
+    padding: 10px 14px;
+    background: var(--gray-100);
+    border-left: 3px solid var(--primary-light);
+    border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+#entitlement-table thead th:nth-child(2),
+#entitlement-table thead th:nth-child(3),
+#entitlement-table tbody td:nth-child(2),
+#entitlement-table tbody td:nth-child(3) {
+    text-align: right;
+}
+
 /* --- Settings Panel --- */
 .settings-panel {
     border: 1.5px solid var(--gray-200);
