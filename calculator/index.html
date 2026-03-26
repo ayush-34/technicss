@@ -109,6 +109,74 @@
                     </div>
                 </div>
 
+                <!-- Settings / Assumptions -->
+                <details class="settings-panel" id="settings-panel">
+                    <summary class="settings-summary">&#9881;&#65039; Settings / Assumptions <span class="settings-hint">(click to expand / edit defaults)</span></summary>
+                    <div class="settings-grid">
+                        <div class="form-group">
+                            <label for="cfg-fungible-pct">Fungible FSI (%)</label>
+                            <input type="number" id="cfg-fungible-pct" min="0" max="100" step="1" value="35">
+                            <span class="field-hint">% of base FSI as fungible residential (DCPR default: 35%)</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="cfg-tdr-loading">TDR Loading</label>
+                            <input type="number" id="cfg-tdr-loading" min="0" max="2" step="0.1" value="0.5">
+                            <span class="field-hint">TDR applied on eligible plots (0.5 for 9–12 m, 1.0 for ≥12 m road)</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="cfg-rehab-increase">Rehab Carpet Increase (%)</label>
+                            <input type="number" id="cfg-rehab-increase" min="0" max="200" step="1" value="35">
+                            <span class="field-hint">Minimum 35% carpet area increase per DCPR rehab norms</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="cfg-rent-rate">Rent Rate (&#8377;/sq.ft/month)</label>
+                            <input type="number" id="cfg-rent-rate" min="0" step="5" value="80">
+                            <span class="field-hint">Alternate accommodation rent per sq.ft per month</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="cfg-project-duration">Project Duration (months)</label>
+                            <input type="number" id="cfg-project-duration" min="1" step="1" value="36">
+                            <span class="field-hint">Estimated construction and handover duration</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="cfg-corpus-per-flat">Corpus per Flat (&#8377;)</label>
+                            <input type="number" id="cfg-corpus-per-flat" min="0" step="100000" value="2000000">
+                            <span class="field-hint">Corpus fund per flat (&#8377;20 Lakhs typical)</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="cfg-premium-pct">Premium Charges (%)</label>
+                            <input type="number" id="cfg-premium-pct" min="0" max="100" step="0.5" value="15">
+                            <span class="field-hint">% of construction cost – minimum 15% per DCPR</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="cfg-finance-pct">Finance Cost (%)</label>
+                            <input type="number" id="cfg-finance-pct" min="0" max="100" step="0.5" value="10">
+                            <span class="field-hint">% of net sale revenue as interest / financing cost</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="cfg-risk-pct">Risk Factor (%)</label>
+                            <input type="number" id="cfg-risk-pct" min="0" max="100" step="0.5" value="10">
+                            <span class="field-hint">% of net sale revenue for contingencies, corpus overruns, etc.</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="cfg-sale-discount">Sale Discount (%)</label>
+                            <input type="number" id="cfg-sale-discount" min="0" max="100" step="0.5" value="10">
+                            <span class="field-hint">Loading, negotiation &amp; unsold inventory deduction from gross revenue</span>
+                        </div>
+                    </div>
+                    <div class="transit-camp-row">
+                        <label class="transit-toggle-label">
+                            <input type="checkbox" id="cfg-transit-camp">
+                            <span>Include Transit Camp Cost</span>
+                        </label>
+                        <div class="form-group transit-rate-group hidden" id="transit-rate-group">
+                            <label for="cfg-transit-rate">Transit Camp Rate (&#8377;/sq.ft)</label>
+                            <input type="number" id="cfg-transit-rate" min="0" step="100" value="1500">
+                            <span class="field-hint">Construction cost per sq.ft for transit camp facility</span>
+                        </div>
+                    </div>
+                </details>
+
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary" id="calculate-btn">Calculate Feasibility</button>
                     <button type="reset" class="btn btn-secondary" id="reset-btn">Reset</button>
@@ -197,6 +265,12 @@
                 <div class="conclusion-box" id="conclusion-box">
                     <p id="conclusion-text"></p>
                 </div>
+            </div>
+
+            <!-- Developer Perspective Note -->
+            <div class="results-block" id="developer-note-block">
+                <h4>Developer Perspective Note</h4>
+                <div class="developer-note-box" id="developer-note-box"></div>
             </div>
 
             <!-- Actions -->
