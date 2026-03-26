@@ -17,15 +17,32 @@
     var CORPUS_PER_FLAT = 2000000;
     var PROJECT_DURATION = 36;
 
+    // ---- Zone Label Helper ----
+    function getZoneLabel(zone) {
+        var labels = {
+            "33_1": "Normal Housing Society (33(1))",
+            "33_5": "MHADA Layout (33(5))",
+            "33_7": "Cessed Building (33(7))",
+            "33_9": "Cluster Redevelopment (33(9))",
+            "suburbs": "Suburbs / Extended Suburbs",
+            "island-city": "Island City"
+        };
+        return labels[zone] || zone;
+    }
+
     // ---- FSI Rules per DCPR 2034 ----
     function getBaseFSI(roadWidth, zone) {
+        // Scheme-specific FSI overrides
+        if (zone === "33_5") return 3.5;
+        if (zone === "33_7") return 4.0;
+        if (zone === "33_9") return 4.5;
+        // Island City norms (33_1 or explicit island-city)
         if (zone === "island-city") {
-            // Island City norms
             if (roadWidth < 9) return 1.33;
             if (roadWidth < 12) return 2.0;
             return 3.0;
         }
-        // Suburbs / Extended Suburbs
+        // Suburbs / Extended Suburbs / 33_1 (normal society)
         if (roadWidth < 9) return 2.0;
         if (roadWidth < 12) return 2.5;
         return 3.0;
@@ -167,23 +184,17 @@
         if (saleComponentArea < 0) saleComponentArea = 0;
 
         // Financial Calculations
-var saleRevenue = saleComponentArea * marketSaleRate;
-var constructionCost = totalBuildableArea * constructionCostRate;
-var premiumCharges = constructionCost * PREMIUM_CHARGES_PCT;
-
-// NEW REALISTIC COSTS
-
-var rentRate = 80; // ₹80 per sq.ft monthly rent
-var projectDuration = 36; // months
-var rentCost = rehabCarpetArea * rentRate * projectDuration;
-var corpusPerFlat = 2000000; // ₹20 lakh per member
-var corpusCost = numberOfFlats * corpusPerFlat;
-var professionalFees = saleRevenue * 0.02; // architect + PMC
-var financeCost = saleRevenue * 0.08; // interest during project
-var totalProjectCost = constructionCost + premiumCharges + rentCost + corpusCost + professionalFees + financeCost;
-
-var developerProfit = saleRevenue - totalProjectCost;
-var profitMargin = (developerProfit / saleRevenue) * 100;
+        var saleRevenue = saleComponentArea * marketRate;
+        var totalConstructionCost = totalBuildableArea * constructionCost;
+        var premiumCharges = totalConstructionCost * PREMIUM_CHARGES_PCT;
+        var rentCost = totalRehabCarpet * RENT_RATE * PROJECT_DURATION;
+        var corpusCost = numFlats * CORPUS_PER_FLAT;
+        var professionalFees = saleRevenue * 0.02;
+        var financeCost = saleRevenue * 0.08;
+        var totalProjectCost = totalConstructionCost + premiumCharges + rentCost + corpusCost + professionalFees + financeCost;
+        var developerProfit = saleRevenue - totalProjectCost;
+        // Margin on sale revenue — standard developer benchmark (20%+ revenue margin = feasible)
+        var profitMarginPct = saleRevenue > 0 ? (developerProfit / saleRevenue) * 100 : 0;
         // Rehab vs Sale percentages
         var rehabPct = totalBuildableArea > 0 ? (totalRehabBuiltup / totalBuildableArea) * 100 : 0;
         var salePct = totalBuildableArea > 0 ? (saleComponentArea / totalBuildableArea) * 100 : 0;
@@ -203,6 +214,10 @@ var profitMargin = (developerProfit / saleRevenue) * 100;
             saleRevenue: saleRevenue,
             totalConstructionCost: totalConstructionCost,
             premiumCharges: premiumCharges,
+            rentCost: rentCost,
+            corpusCost: corpusCost,
+            professionalFees: professionalFees,
+            financeCost: financeCost,
             totalProjectCost: totalProjectCost,
             developerProfit: developerProfit,
             profitMarginPct: profitMarginPct,
@@ -257,7 +272,11 @@ var profitMargin = (developerProfit / saleRevenue) * 100;
         finBody.innerHTML = [
             row("Sale Revenue (" + formatNumber(r.saleComponentArea) + " sq.ft × ₹" + formatNumber(lastInputs.marketRate) + ")", formatCurrency(r.saleRevenue)),
             row("Construction Cost (" + formatNumber(r.totalBuildableArea) + " sq.ft × ₹" + formatNumber(lastInputs.constructionCost) + ")", formatCurrency(r.totalConstructionCost)),
-            row("Premium & Statutory Charges (est. 10%)", formatCurrency(r.premiumCharges)),
+            row("Premium & Statutory Charges (10%)", formatCurrency(r.premiumCharges)),
+            row("Rent / Alternate Accommodation (" + lastInputs.numFlats + " flats × " + PROJECT_DURATION + " months)", formatCurrency(r.rentCost)),
+            row("Corpus Fund (₹20L × " + lastInputs.numFlats + " flats)", formatCurrency(r.corpusCost)),
+            row("Professional Fees (Architect/PMC, 2%)", formatCurrency(r.professionalFees)),
+            row("Finance Cost (8%)", formatCurrency(r.financeCost)),
             row("Total Project Cost", formatCurrency(r.totalProjectCost)),
             rowHighlight("Estimated Developer Profit", formatCurrency(r.developerProfit)),
             row("Profit Margin", r.profitMarginPct.toFixed(1) + "%")
@@ -378,7 +397,7 @@ var profitMargin = (developerProfit / saleRevenue) * 100;
             body: [
                 ["Plot Area", formatNumber(inputs.plotAreaSqFt) + " sq.ft (" + formatNumber(inputs.plotAreaSqM) + " sq.m)"],
                 ["Road Width", inputs.roadWidth + " m"],
-                ["Zone", inputs.zone === "island-city" ? "Island City" : "Suburbs / Extended Suburbs"],
+                ["Zone / Scheme", getZoneLabel(inputs.zone)],
                 ["Number of Existing Flats", inputs.numFlats.toString()],
                 ["Existing Carpet Area per Flat", formatNumber(inputs.carpetAreaPerFlat) + " sq.ft"],
                 ["Existing Total Built-up Area", formatNumber(inputs.existingBuiltup) + " sq.ft"],
@@ -407,34 +426,6 @@ var profitMargin = (developerProfit / saleRevenue) * 100;
             body: [
                 ["Existing FSI", r.existingFSI.toFixed(2)],
                 ["Base Permissible FSI", r.baseFSI.toFixed(2)],
-               function getBaseFSI(roadWidth, zone, scheme) {
-
-    if (scheme === "33_5") {
-        return 3.5;
-    }
-
-    if (scheme === "33_7") {
-        return 4.0;
-    }
-
-    if (scheme === "33_9") {
-        return 4.5;
-    }
-
-    // default normal society redevelopment
-
-    if (zone === "island-city") {
-        if (roadWidth < 9) return 1.33;
-        if (roadWidth < 12) return 2.0;
-        return 3.0;
-    }
-
-    // suburbs
-
-    if (roadWidth < 9) return 2.0;
-    if (roadWidth < 12) return 2.5;
-    return 3.0;
-}
                 ["Fungible FSI (35% Residential)", r.fungibleFSI.toFixed(2)],
                 ["TDR Loading", r.tdr.toFixed(2)],
                 ["Total Permissible FSI", r.totalPermissibleFSI.toFixed(2)]
@@ -512,7 +503,11 @@ var profitMargin = (developerProfit / saleRevenue) * 100;
             body: [
                 ["Sale Revenue", formatCurrency(r.saleRevenue)],
                 ["Construction Cost", formatCurrency(r.totalConstructionCost)],
-                ["Premium & Statutory Charges", formatCurrency(r.premiumCharges)],
+                ["Premium & Statutory Charges (10%)", formatCurrency(r.premiumCharges)],
+                ["Rent / Alternate Accommodation", formatCurrency(r.rentCost)],
+                ["Corpus Fund", formatCurrency(r.corpusCost)],
+                ["Professional Fees (Architect/PMC, 2%)", formatCurrency(r.professionalFees)],
+                ["Finance Cost (8%)", formatCurrency(r.financeCost)],
                 ["Total Project Cost", formatCurrency(r.totalProjectCost)],
                 ["Estimated Developer Profit", formatCurrency(r.developerProfit)],
                 ["Profit Margin", r.profitMarginPct.toFixed(1) + "%"]
