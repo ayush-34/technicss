@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Lead Generator | Technicss Structural Consultants</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<header class="header">
+    <div class="container">
+        <div class="header-content">
+            <h1>Technicss</h1>
+            <p class="tagline">Structural Consultants — Mumbai</p>
+        </div>
+    </div>
+</header>
+
+<!-- ===== MAIN ===== -->
+<main class="container">
+
+    <!-- HERO -->
+    <section class="hero">
+        <h2>🏗️ Daily Lead Generator</h2>
+        <p>Real estate &amp; structural consultancy leads for Bandra, Santacruz, Vile Parle, Khar &amp; Mumbai</p>
+    </section>
+
+    <!-- DASHBOARD STATS BAR -->
+    <section class="stats-bar" id="stats-bar">
+        <div class="stat-card stat-total">
+            <span class="stat-num" id="stat-total">—</span>
+            <span class="stat-label">Leads Today</span>
+        </div>
+        <div class="stat-card stat-urgency">
+            <span class="stat-num" id="stat-urgency">—</span>
+            <span class="stat-label">⚡ High Urgency</span>
+        </div>
+        <div class="stat-card stat-high">
+            <span class="stat-num" id="stat-high">—</span>
+            <span class="stat-label">🔥 High Value</span>
+        </div>
+        <div class="stat-card stat-redevelop">
+            <span class="stat-num" id="stat-redevelop">—</span>
+            <span class="stat-label">🏢 Redevelopment</span>
+        </div>
+        <div class="stat-card stat-total-all">
+            <span class="stat-num" id="stat-total-all">—</span>
+            <span class="stat-label">Total in Database</span>
+        </div>
+    </section>
+
+    <!-- CONTROLS -->
+    <section class="controls-bar card">
+        <div class="controls-left">
+            <label for="date-picker" class="ctrl-label">📅 View Leads for:</label>
+            <input type="date" id="date-picker" class="ctrl-input">
+            <button class="btn btn-ghost" id="today-btn">Today</button>
+            <button class="btn btn-ghost" id="all-btn">All Leads</button>
+        </div>
+        <div class="controls-right">
+            <input type="text" id="search-box" class="ctrl-search" placeholder="🔍 Search name, area, type…">
+            <select id="filter-priority" class="ctrl-select">
+                <option value="">All Priorities</option>
+                <option value="High Urgency">⚡ High Urgency</option>
+                <option value="Normal">Normal</option>
+            </select>
+            <select id="filter-type" class="ctrl-select">
+                <option value="">All Types</option>
+                <option value="Structural Audit">Structural Audit</option>
+                <option value="Repair">Repair / Restoration</option>
+                <option value="Redevelopment">Redevelopment</option>
+                <option value="PMC">PMC</option>
+            </select>
+            <select id="filter-value" class="ctrl-select">
+                <option value="">All Values</option>
+                <option value="High">High Value</option>
+                <option value="Medium">Medium Value</option>
+                <option value="Low">Low Value</option>
+            </select>
+        </div>
+    </section>
+
+    <!-- LOADING STATE -->
+    <div id="loading-state" class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading leads…</p>
+    </div>
+
+    <!-- ERROR STATE -->
+    <div id="error-state" class="error-state hidden">
+        <p>⚠️ Could not load leads data. <a href="leads.csv" target="_blank">View raw CSV</a></p>
+    </div>
+
+    <!-- NO RESULTS -->
+    <div id="no-results" class="no-results hidden">
+        <p>📭 No leads found for the selected filters.</p>
+        <p>Try selecting a different date, clearing the search, or clicking <strong>All Leads</strong>.</p>
+    </div>
+
+    <!-- ⚡ HIGH URGENCY SECTION -->
+    <section id="urgency-section" class="hidden">
+        <div class="section-header urgency-header">
+            <h3>⚡ High Urgency Leads — Act Now</h3>
+            <span class="section-count" id="urgency-count">0</span>
+        </div>
+        <div class="leads-grid" id="urgency-grid"></div>
+    </section>
+
+    <!-- 🎯 TOP 3 SUGGESTIONS -->
+    <section id="top3-section" class="hidden">
+        <div class="section-header top3-header">
+            <h3>🎯 Top 3 Leads to Approach First</h3>
+        </div>
+        <div class="leads-grid top3-grid" id="top3-grid"></div>
+    </section>
+
+    <!-- ALL LEADS SECTION -->
+    <section id="all-leads-section" class="hidden">
+        <div class="section-header">
+            <h3 id="all-leads-title">All Leads</h3>
+            <span class="section-count" id="all-leads-count">0</span>
+        </div>
+        <div class="leads-grid" id="leads-grid"></div>
+    </section>
+
+    <!-- ADD LEAD BUTTON -->
+    <div class="add-lead-row">
+        <button class="btn btn-primary btn-add" id="add-lead-btn">+ Add New Lead</button>
+        <button class="btn btn-secondary" id="export-btn">📋 Export Today's Report</button>
+    </div>
+
+</main>
+
+<!-- ===== ADD LEAD MODAL ===== -->
+<div class="modal-overlay hidden" id="modal-overlay">
+    <div class="modal" id="add-lead-modal">
+        <div class="modal-header">
+            <h3 id="modal-title">Add New Lead</h3>
+            <button class="modal-close" id="modal-close">✕</button>
+        </div>
+        <div class="modal-body">
+            <form id="add-lead-form" novalidate>
+                <div class="modal-grid">
+                    <div class="form-group form-group-full">
+                        <label for="f-name">Society / Building Name *</label>
+                        <input type="text" id="f-name" placeholder="e.g. Khar Sagar CHS" required>
+                    </div>
+                    <div class="form-group form-group-full">
+                        <label for="f-location">Exact Location *</label>
+                        <input type="text" id="f-location" placeholder="Street, Area, Pin Code" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="f-age">Approx Age (Years)</label>
+                        <input type="number" id="f-age" min="0" placeholder="e.g. 45">
+                    </div>
+                    <div class="form-group">
+                        <label for="f-contact">Contact Information 📞</label>
+                        <input type="text" id="f-contact" placeholder="Phone / Email of secretary">
+                    </div>
+                    <div class="form-group form-group-full">
+                        <label for="f-condition">Condition Indicators</label>
+                        <textarea id="f-condition" rows="2" placeholder="Visible cracks, spalling, leakage…"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="f-type">Type of Opportunity</label>
+                        <select id="f-type">
+                            <option>Structural Audit</option>
+                            <option>Repair / Restoration</option>
+                            <option>Redevelopment / PMC</option>
+                            <option>PMC</option>
+                            <option>Structural Audit / Repair</option>
+                            <option>Structural Audit / PMC</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="f-value">Estimated Potential Value</label>
+                        <select id="f-value">
+                            <option>High</option>
+                            <option>Medium</option>
+                            <option>Low</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="f-source">Source</label>
+                        <input type="text" id="f-source" placeholder="Google Maps / Justdial / Field Survey…">
+                    </div>
+                    <div class="form-group">
+                        <label for="f-outreach">Outreach Method</label>
+                        <select id="f-outreach">
+                            <option>Visit</option>
+                            <option>Cold Call</option>
+                            <option>Email</option>
+                            <option>Letter Drop</option>
+                            <option>WhatsApp</option>
+                        </select>
+                    </div>
+                    <div class="form-group form-group-full">
+                        <label for="f-strategy">Suggested Approach Strategy</label>
+                        <textarea id="f-strategy" rows="2" placeholder="e.g. Visit society office; speak to chairman…"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="f-priority">Priority</label>
+                        <select id="f-priority">
+                            <option>Normal</option>
+                            <option>High Urgency</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="f-date">Date Added</label>
+                        <input type="date" id="f-date">
+                    </div>
+                    <div class="form-group">
+                        <label for="f-status">Status</label>
+                        <select id="f-status">
+                            <option>New</option>
+                            <option>Contacted</option>
+                            <option>In Progress</option>
+                            <option>Converted</option>
+                            <option>Closed</option>
+                        </select>
+                    </div>
+                    <div class="form-group form-group-full">
+                        <label for="f-notes">Notes</label>
+                        <textarea id="f-notes" rows="2" placeholder="Additional observations…"></textarea>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" class="btn btn-primary">Save Lead</button>
+                    <button type="button" class="btn btn-secondary" id="modal-cancel">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ===== LEAD DETAIL MODAL ===== -->
+<div class="modal-overlay hidden" id="detail-overlay">
+    <div class="modal modal-detail" id="detail-modal">
+        <div class="modal-header">
+            <h3 id="detail-title">Lead Details</h3>
+            <button class="modal-close" id="detail-close">✕</button>
+        </div>
+        <div class="modal-body" id="detail-body"></div>
+    </div>
+</div>
+
+<!-- ===== EXPORT MODAL ===== -->
+<div class="modal-overlay hidden" id="export-overlay">
+    <div class="modal modal-export" id="export-modal">
+        <div class="modal-header">
+            <h3>📋 Daily Lead Report</h3>
+            <button class="modal-close" id="export-close">✕</button>
+        </div>
+        <div class="modal-body">
+            <textarea id="export-text" class="export-textarea" readonly></textarea>
+            <div class="modal-actions">
+                <button class="btn btn-primary" id="copy-report-btn">Copy to Clipboard</button>
+                <button class="btn btn-secondary" id="export-close-btn">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== FOOTER ===== -->
+<footer class="footer">
+    <div class="container">
+        <p>&copy; <span id="footer-year"></span> Technicss Structural Consultants. All rights reserved.</p>
+    </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
