@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Marketing Agent | Technicss Structural Consultants</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ── Header ───────────────────────────────────────────────── -->
+<header class="header">
+  <div class="header-inner">
+    <div class="logo-block">
+      <div class="logo-icon">🏗️</div>
+      <div class="logo-text">
+        <h1>Technicss Structural Consultants</h1>
+        <p>Daily Marketing Content Generator — Mumbai CHS Outreach</p>
+      </div>
+    </div>
+    <div class="header-badge">
+      <div class="date-label">Today</div>
+      <div class="date-val" id="today-date">—</div>
+    </div>
+  </div>
+</header>
+
+<!-- ── Main ─────────────────────────────────────────────────── -->
+<main class="main">
+
+  <!-- Day Navigator -->
+  <nav class="day-nav" aria-label="Day navigation">
+    <button class="day-nav-btn" id="btn-prev" aria-label="Previous day">&#8592; Prev</button>
+    <div class="day-nav-center">
+      <div class="day-title" id="day-label">Day 1 of 7</div>
+      <div class="day-theme" id="day-theme">Loading…</div>
+    </div>
+    <button class="day-nav-btn" id="btn-next" aria-label="Next day">Next &#8594;</button>
+  </nav>
+
+  <!-- Content Grid -->
+  <div class="section-grid">
+
+    <!-- LinkedIn Post -->
+    <div class="card card-full">
+      <div class="card-header">
+        <div class="card-title">
+          <span class="icon icon-linkedin">💼</span>
+          LinkedIn Post
+        </div>
+        <button class="copy-btn" data-target="content-linkedin" aria-label="Copy LinkedIn post">
+          📋 Copy
+        </button>
+      </div>
+      <div class="card-body">
+        <pre class="content-text" id="content-linkedin"></pre>
+      </div>
+    </div>
+
+    <!-- Google Maps Post -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <span class="icon icon-maps">📍</span>
+          Google Business Post
+        </div>
+        <button class="copy-btn" data-target="content-maps" aria-label="Copy Google Maps post">
+          📋 Copy
+        </button>
+      </div>
+      <div class="card-body">
+        <pre class="content-text" id="content-maps"></pre>
+      </div>
+    </div>
+
+    <!-- Poster Content -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <span class="icon icon-poster">🖼️</span>
+          Poster Content
+        </div>
+        <button class="copy-btn" data-target="content-poster-text" aria-label="Copy poster content">
+          📋 Copy
+        </button>
+      </div>
+      <div class="card-body">
+        <div class="poster-grid" id="poster-fields"></div>
+        <div class="poster-preview" id="poster-preview">
+          <div class="pv-logo">Technicss Structural Consultants</div>
+          <div class="pv-headline" id="pv-headline"></div>
+          <div class="pv-subtext" id="pv-subtext"></div>
+          <div class="pv-cta" id="pv-cta"></div>
+          <div class="pv-footer">Mumbai | Khar · Bandra · Santacruz · Vile Parle</div>
+        </div>
+        <!-- hidden element for copy -->
+        <pre class="content-text" id="content-poster-text" style="display:none"></pre>
+      </div>
+    </div>
+
+    <!-- Captions -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <span class="icon icon-caption">✍️</span>
+          Captions
+        </div>
+        <button class="copy-btn" data-target="active-caption" aria-label="Copy active caption">
+          📋 Copy
+        </button>
+      </div>
+      <div class="card-body">
+        <div class="caption-tabs">
+          <button class="tab-btn active" data-tab="cap-linkedin">LinkedIn</button>
+          <button class="tab-btn" data-tab="cap-instagram">Instagram</button>
+          <button class="tab-btn" data-tab="cap-whatsapp">WhatsApp</button>
+        </div>
+        <div class="tab-pane active" id="cap-linkedin">
+          <pre class="content-text" id="content-cap-linkedin"></pre>
+        </div>
+        <div class="tab-pane" id="cap-instagram">
+          <pre class="content-text" id="content-cap-instagram"></pre>
+        </div>
+        <div class="tab-pane" id="cap-whatsapp">
+          <pre class="content-text" id="content-cap-whatsapp"></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hashtags -->
+    <div class="card card-full">
+      <div class="card-header">
+        <div class="card-title">
+          <span class="icon icon-hashtag">#️⃣</span>
+          Hashtags
+          <span class="card-title-hint">Click any tag to copy it</span>
+        </div>
+        <button class="copy-btn" id="copy-all-hashtags" aria-label="Copy all hashtags">
+          📋 Copy All
+        </button>
+      </div>
+      <div class="card-body">
+        <div class="hashtag-cloud" id="hashtag-cloud"></div>
+      </div>
+    </div>
+
+  </div><!-- /section-grid -->
+
+  <!-- Download Bar -->
+  <div class="download-bar">
+    <p><strong>Export today's content</strong> — Copy everything to clipboard or download as a text file.</p>
+    <div class="flex-gap">
+      <button class="dl-btn dl-btn-secondary" id="btn-copy-all">📋 Copy All Content</button>
+      <button class="dl-btn dl-btn-primary" id="btn-download">⬇️ Download .txt</button>
+    </div>
+  </div>
+
+</main>
+
+<!-- Toast notification -->
+<div class="toast" id="toast" role="status" aria-live="polite">✔ Copied!</div>
+
+<script src="script.js"></script>
+</body>
+</html>
