@@ -1,5 +1,6 @@
 (() => {
   const storageKey = "snagging.projects.v1";
+  const maxImageSize = 2 * 1024 * 1024;
   const state = {
     projects: [],
     activeProjectId: null,
@@ -315,6 +316,11 @@
   const handleImageChange = (event) => {
     const file = event.target.files[0];
     if (!file) return;
+    if (file.size > maxImageSize) {
+      alert("Image is too large. Please choose a file under 2MB.");
+      elements.snagImage.value = "";
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       state.currentImage = reader.result;
@@ -387,13 +393,18 @@
       },
       snags: project.snags,
     };
+    const safeName =
+      project.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)+/g, "") || "project";
     const blob = new Blob([JSON.stringify(data, null, 2)], {
       type: "application/json",
     });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${project.name.replace(/\s+/g, "-").toLowerCase()}-snags.json`;
+    link.download = `${safeName}-snags.json`;
     document.body.appendChild(link);
     link.click();
     link.remove();
