@@ -160,6 +160,14 @@
 
   const formatDate = (isoDate) => new Date(isoDate).toLocaleDateString();
 
+  const escapeHtml = (value) =>
+    String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
   const resetProjectForm = () => {
     elements.projectForm.reset();
   };
@@ -506,9 +514,377 @@
     URL.revokeObjectURL(url);
   };
 
+  const generatePrintReport = () => {
+    const project = getActiveProject();
+    if (!project) return;
+
+    const snags = project.snags;
+    const total = snags.length;
+    const open = snags.filter((snag) => snag.status === "Open").length;
+    const inProgress = snags.filter((snag) => snag.status === "In Progress").length;
+    const closed = snags.filter((snag) => snag.status === "Closed").length;
+
+    const inspectionDate = project.date
+      ? formatDate(project.date)
+      : formatDate(new Date().toISOString());
+
+    const rowsHtml =
+      snags.length === 0
+        ? `<tr><td class="empty-row" colspan="5">No snags recorded.</td></tr>`
+        : snags
+            .map((snag, index) => {
+              const status = statusClass(snag.status);
+              const details = [
+                `<div><span class="label">Location:</span> ${escapeHtml(
+                  snag.location
+                )}</div>`,
+                `<div><span class="label">Priority:</span> ${escapeHtml(
+                  snag.priority
+                )}</div>`,
+                `<div><span class="label">Status:</span> ${escapeHtml(
+                  snag.status
+                )}</div>`,
+              ];
+              if (snag.assignedTo) {
+                details.push(
+                  `<div><span class="label">Assigned To:</span> ${escapeHtml(
+                    snag.assignedTo
+                  )}</div>`
+                );
+              }
+
+              const imageCell = isSafeImageData(snag.imageData)
+                ? `<img src="${snag.imageData}" alt="${escapeHtml(
+                    snag.title
+                  )}" />`
+                : `<span class="placeholder">No image</span>`;
+
+              return `
+                <tr>
+                  <td class="id-cell status-${status}">${index + 1}</td>
+                  <td>${escapeHtml(formatDate(snag.date))}</td>
+                  <td>
+                    <div class="title">${escapeHtml(snag.title)}</div>
+                    <div class="description">${escapeHtml(
+                      snag.description || "—"
+                    )}</div>
+                  </td>
+                  <td class="details">
+                    ${details.join("")}
+                  </td>
+                  <td class="image-cell">
+                    ${imageCell}
+                  </td>
+                </tr>
+              `;
+            })
+            .join("");
+
+    const reportHtml = `<!doctype html>
+      <html lang="en">
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>Snag List Report</title>
+          <style>
+            :root {
+              --text: #1f1f1f;
+              --muted: #6b6b6b;
+              --border: #d9d9d9;
+              --header-bg: #f4f4f4;
+              --row-alt: #fafafa;
+              --open: #d64541;
+              --progress: #f39c12;
+              --closed: #27ae60;
+            }
+
+            * {
+              box-sizing: border-box;
+            }
+
+            body {
+              margin: 0;
+              font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+              color: var(--text);
+              background: #fff;
+            }
+
+            .report {
+              padding: 24px;
+            }
+
+            .report-header {
+              display: flex;
+              justify-content: space-between;
+              gap: 24px;
+              padding-bottom: 16px;
+              border-bottom: 1px solid var(--border);
+            }
+
+            .company {
+              font-size: 0.9rem;
+              letter-spacing: 0.08em;
+              font-weight: 700;
+              color: var(--muted);
+              text-transform: uppercase;
+            }
+
+            .report-title {
+              margin: 6px 0 0;
+              font-size: 1.7rem;
+              font-weight: 700;
+            }
+
+            .report-meta {
+              display: grid;
+              gap: 6px;
+              font-size: 0.92rem;
+              color: var(--muted);
+              min-width: 220px;
+            }
+
+            .report-meta span {
+              color: var(--text);
+              font-weight: 600;
+            }
+
+            .summary {
+              margin: 20px 0 24px;
+              display: grid;
+              grid-template-columns: repeat(4, minmax(0, 1fr));
+              gap: 12px;
+            }
+
+            .summary-card {
+              border: 1px solid var(--border);
+              padding: 12px 14px;
+              border-radius: 10px;
+              background: #fff;
+              position: relative;
+            }
+
+            .summary-card::before {
+              content: "";
+              position: absolute;
+              left: 0;
+              top: 0;
+              bottom: 0;
+              width: 4px;
+              border-radius: 10px 0 0 10px;
+              background: var(--border);
+            }
+
+            .summary-card.open::before {
+              background: var(--open);
+            }
+
+            .summary-card.progress::before {
+              background: var(--progress);
+            }
+
+            .summary-card.closed::before {
+              background: var(--closed);
+            }
+
+            .summary-card h3 {
+              margin: 6px 0 0;
+              font-size: 1.4rem;
+            }
+
+            .summary-card p {
+              margin: 0;
+              font-size: 0.8rem;
+              text-transform: uppercase;
+              letter-spacing: 0.08em;
+              color: var(--muted);
+            }
+
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              font-size: 0.9rem;
+            }
+
+            thead th {
+              text-align: left;
+              padding: 10px;
+              background: var(--header-bg);
+              border: 1px solid var(--border);
+              font-weight: 700;
+            }
+
+            tbody td {
+              padding: 10px;
+              border: 1px solid var(--border);
+              vertical-align: top;
+            }
+
+            tbody tr:nth-child(even) {
+              background: var(--row-alt);
+            }
+
+            .id-cell {
+              text-align: center;
+              font-weight: 700;
+              color: #fff;
+              width: 50px;
+            }
+
+            .id-cell.status-open {
+              background: var(--open);
+            }
+
+            .id-cell.status-in-progress {
+              background: var(--progress);
+            }
+
+            .id-cell.status-closed {
+              background: var(--closed);
+            }
+
+            .title {
+              font-weight: 700;
+              margin-bottom: 4px;
+            }
+
+            .description {
+              color: var(--muted);
+              line-height: 1.4;
+            }
+
+            .details {
+              line-height: 1.5;
+              color: var(--text);
+            }
+
+            .details .label {
+              color: var(--muted);
+              font-weight: 600;
+              margin-right: 4px;
+            }
+
+            .image-cell {
+              text-align: center;
+              width: 140px;
+            }
+
+            .image-cell img {
+              width: 120px;
+              height: 90px;
+              object-fit: contain;
+              border: 1px solid var(--border);
+              background: #fff;
+            }
+
+            .placeholder {
+              display: inline-block;
+              font-size: 0.8rem;
+              color: var(--muted);
+              padding: 24px 8px;
+              border: 1px dashed var(--border);
+              width: 120px;
+            }
+
+            .empty-row {
+              text-align: center;
+              color: var(--muted);
+              padding: 20px;
+            }
+
+            @page {
+              size: A4;
+              margin: 16mm;
+            }
+
+            @media print {
+              body {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+              }
+
+              thead {
+                display: table-header-group;
+              }
+
+              tr {
+                break-inside: avoid;
+                page-break-inside: avoid;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="report">
+            <header class="report-header">
+              <div>
+                <div class="company">Technicss Structural Consultants</div>
+                <div class="report-title">Snag List Report</div>
+              </div>
+              <div class="report-meta">
+                <div><span>Project:</span> ${escapeHtml(project.name)}</div>
+                <div><span>Inspection Date:</span> ${escapeHtml(
+                  inspectionDate
+                )}</div>
+                <div><span>Prepared By:</span> SnagTrack</div>
+              </div>
+            </header>
+
+            <section class="summary">
+              <div class="summary-card">
+                <p>Total Snags</p>
+                <h3>${total}</h3>
+              </div>
+              <div class="summary-card open">
+                <p>Open</p>
+                <h3>${open}</h3>
+              </div>
+              <div class="summary-card progress">
+                <p>In Progress</p>
+                <h3>${inProgress}</h3>
+              </div>
+              <div class="summary-card closed">
+                <p>Closed</p>
+                <h3>${closed}</h3>
+              </div>
+            </section>
+
+            <section>
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th>Details</th>
+                    <th>Image</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${rowsHtml}
+                </tbody>
+              </table>
+            </section>
+          </div>
+        </body>
+      </html>`;
+
+    const printWindow = window.open("", "_blank", "width=1200,height=800");
+    if (!printWindow) {
+      alert("Please allow pop-ups to print the report.");
+      return;
+    }
+    printWindow.document.open();
+    printWindow.document.write(reportHtml);
+    printWindow.document.close();
+    printWindow.onload = () => {
+      printWindow.focus();
+      printWindow.print();
+    };
+  };
+
   const handlePrintReport = () => {
     setView("project");
-    window.print();
+    generatePrintReport();
   };
 
   const returnToProject = () => {
