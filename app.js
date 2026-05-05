@@ -100,8 +100,14 @@
     return project.snags.find((snag) => snag.id === state.activeSnagId);
   };
 
-  const createId = (prefix) =>
-    `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+  const createId = (prefix) => {
+    if (globalThis.crypto?.randomUUID) {
+      return `${prefix}-${globalThis.crypto.randomUUID()}`;
+    }
+    return `${prefix}-${Date.now().toString(36)}-${Math.random()
+      .toString(36)
+      .slice(2, 7)}`;
+  };
 
   const createUniqueId = (prefix, existingIds) => {
     let candidate = createId(prefix);
@@ -148,6 +154,9 @@
     };
   };
 
+  const isSafeImageData = (value) =>
+    typeof value === "string" && value.startsWith("data:image/");
+
   const formatDate = (isoDate) => new Date(isoDate).toLocaleDateString();
 
   const resetProjectForm = () => {
@@ -164,17 +173,35 @@
     state.projects.forEach((project) => {
       const card = document.createElement("div");
       card.className = "card project-card";
-      card.innerHTML = `
-        <div>
-          <h3>${project.name}</h3>
-          <p class="muted">${project.location} • ${project.client}</p>
-          <p class="muted">Date: ${project.date}</p>
-        </div>
-        <div class="project-actions">
-          <button class="btn primary" data-action="open" data-id="${project.id}">Open</button>
-          <button class="btn ghost" data-action="delete" data-id="${project.id}">Delete</button>
-        </div>
-      `;
+
+      const info = document.createElement("div");
+      const title = document.createElement("h3");
+      title.textContent = project.name;
+      const meta = document.createElement("p");
+      meta.className = "muted";
+      meta.textContent = `${project.location} • ${project.client}`;
+      const date = document.createElement("p");
+      date.className = "muted";
+      date.textContent = `Date: ${project.date}`;
+      info.append(title, meta, date);
+
+      const actions = document.createElement("div");
+      actions.className = "project-actions";
+      const openButton = document.createElement("button");
+      openButton.className = "btn primary";
+      openButton.type = "button";
+      openButton.dataset.action = "open";
+      openButton.dataset.id = project.id;
+      openButton.textContent = "Open";
+      const deleteButton = document.createElement("button");
+      deleteButton.className = "btn ghost";
+      deleteButton.type = "button";
+      deleteButton.dataset.action = "delete";
+      deleteButton.dataset.id = project.id;
+      deleteButton.textContent = "Delete";
+      actions.append(openButton, deleteButton);
+
+      card.append(info, actions);
       elements.projectsList.appendChild(card);
     });
   };
@@ -223,16 +250,30 @@
       card.type = "button";
       card.className = "card snag-card";
       card.dataset.id = snag.id;
-      card.innerHTML = `
-        <div class="snag-thumb">
-          ${snag.imageData ? `<img src="${snag.imageData}" alt="${snag.title}" />` : "No image"}
-        </div>
-        <div>
-          <span class="badge ${statusClass(snag.status)}">${snag.status}</span>
-          <h3>${snag.title}</h3>
-          <p class="muted">Priority: ${snag.priority}</p>
-        </div>
-      `;
+
+      const thumb = document.createElement("div");
+      thumb.className = "snag-thumb";
+      if (isSafeImageData(snag.imageData)) {
+        const image = document.createElement("img");
+        image.src = snag.imageData;
+        image.alt = snag.title;
+        thumb.appendChild(image);
+      } else {
+        thumb.textContent = "No image";
+      }
+
+      const details = document.createElement("div");
+      const badge = document.createElement("span");
+      badge.className = `badge ${statusClass(snag.status)}`;
+      badge.textContent = snag.status;
+      const title = document.createElement("h3");
+      title.textContent = snag.title;
+      const priority = document.createElement("p");
+      priority.className = "muted";
+      priority.textContent = `Priority: ${snag.priority}`;
+      details.append(badge, title, priority);
+
+      card.append(thumb, details);
       elements.snagList.appendChild(card);
     });
   };
@@ -349,7 +390,7 @@
   };
 
   const updatePreview = () => {
-    if (state.currentImage) {
+    if (isSafeImageData(state.currentImage)) {
       elements.snagPreview.src = state.currentImage;
       elements.snagPreviewLabel.textContent = "Attached image preview.";
     } else {
@@ -373,6 +414,10 @@
     reader.onload = () => {
       state.currentImage = reader.result;
       updatePreview();
+    };
+    reader.onerror = () => {
+      alert("Unable to load image. Please try a different file.");
+      elements.snagImage.value = "";
     };
     reader.readAsDataURL(file);
   };
@@ -443,6 +488,7 @@
     };
     const safeName =
       project.name
+        .trim()
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)+/g, "") || "project";
