@@ -145,9 +145,9 @@
   const renderDashboard = (snags) => {
     const total = snags.length;
     const closed = snags.filter((snag) => snag.status === "Closed").length;
-    const open = total - closed;
+    const openSnags = total - closed;
     elements.statTotal.textContent = total;
-    elements.statOpen.textContent = open;
+    elements.statOpen.textContent = openSnags;
     elements.statClosed.textContent = closed;
   };
 
@@ -317,7 +317,10 @@
     const file = event.target.files[0];
     if (!file) return;
     if (file.size > maxImageSize) {
-      alert("Image is too large. Please choose a file under 2MB.");
+      const sizeInMb = (file.size / (1024 * 1024)).toFixed(2);
+      alert(
+        `Image is too large (${sizeInMb}MB). Please choose a file under 2MB.`
+      );
       elements.snagImage.value = "";
       return;
     }
