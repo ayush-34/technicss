@@ -879,10 +879,11 @@
       );
       return;
     }
-    printWindow.addEventListener("load", () => {
+    const handlePrintLoad = () => {
       printWindow.focus();
       printWindow.print();
-    });
+    };
+    printWindow.addEventListener("load", handlePrintLoad, { once: true });
     printWindow.document.open();
     printWindow.document.write(reportHtml);
     printWindow.document.close();
