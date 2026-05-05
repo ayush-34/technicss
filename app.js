@@ -870,7 +870,9 @@
 
     const printWindow = window.open("", "_blank", "width=1200,height=800");
     if (!printWindow) {
-      alert("Please allow pop-ups to print the report.");
+      alert(
+        "Unable to open the print window. Please enable pop-ups for this site in your browser settings."
+      );
       return;
     }
     printWindow.document.open();
