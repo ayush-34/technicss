@@ -1,6 +1,7 @@
 (() => {
   const storageKey = "snagging.projects.v1";
-  const maxImageSize = 2 * 1024 * 1024;
+  const bytesPerMB = 1024 * 1024;
+  const maxImageSize = 2 * bytesPerMB;
   const state = {
     projects: [],
     activeProjectId: null,
@@ -403,7 +404,7 @@
     const file = event.target.files[0];
     if (!file) return;
     if (file.size > maxImageSize) {
-      const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
+      const sizeInMB = (file.size / bytesPerMB).toFixed(2);
       alert(
         `Image is too large (${sizeInMB}MB). Please choose a file under 2MB.`
       );
