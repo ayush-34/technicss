@@ -158,6 +158,14 @@
   const isSafeImageData = (value) =>
     typeof value === "string" && value.startsWith("data:image/");
 
+  const getSafeImageData = (value) => {
+    if (!isSafeImageData(value)) return "";
+    const trimmed = value.trim();
+    const dataUriPattern =
+      /^data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+/=]+$/;
+    return dataUriPattern.test(trimmed) ? trimmed : "";
+  };
+
   const formatDate = (isoDate) => new Date(isoDate).toLocaleDateString();
 
   const escapeHtml = (value) =>
@@ -553,8 +561,9 @@
                 );
               }
 
-              const imageCell = isSafeImageData(snag.imageData)
-                ? `<img src="${escapeHtml(snag.imageData)}" alt="${escapeHtml(
+              const safeImageData = getSafeImageData(snag.imageData);
+              const imageCell = safeImageData
+                ? `<img src="${safeImageData}" alt="${escapeHtml(
                     snag.title
                   )}" />`
                 : `<span class="placeholder">No image</span>`;
