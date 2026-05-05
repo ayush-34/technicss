@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SnagTrack - Site Snagging Manager</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="header-top">
+        <div>
+          <p class="app-label">Snagging Manager</p>
+          <h1>SnagTrack</h1>
+        </div>
+        <button class="btn ghost hidden" id="back-button" type="button">Back</button>
+      </div>
+      <p class="header-subtitle" id="header-subtitle">Manage projects and snags in one place.</p>
+    </header>
+
+    <main class="app-main">
+      <section class="view active" id="projects-view">
+        <div class="card">
+          <h2>Create Project</h2>
+          <form class="form-grid" id="project-form">
+            <label>
+              <span>Project Name</span>
+              <input type="text" name="name" placeholder="e.g., Palm Tower Repairs" required />
+            </label>
+            <label>
+              <span>Location</span>
+              <input type="text" name="location" placeholder="e.g., Bandra West" required />
+            </label>
+            <label>
+              <span>Client</span>
+              <input type="text" name="client" placeholder="e.g., Omkar CHS" required />
+            </label>
+            <label>
+              <span>Date</span>
+              <input type="date" name="date" required />
+            </label>
+            <button class="btn primary" type="submit">Create Project</button>
+          </form>
+        </div>
+
+        <div class="section-header">
+          <h2>Projects</h2>
+          <p class="muted">Open a project to manage snags.</p>
+        </div>
+        <p class="empty-state" id="projects-empty">No projects yet. Create one to begin.</p>
+        <div class="grid" id="projects-list"></div>
+      </section>
+
+      <section class="view" id="project-view">
+        <div class="card project-summary">
+          <div>
+            <h2 id="project-title">Project</h2>
+            <p class="muted" id="project-meta"></p>
+          </div>
+          <div class="stack">
+            <button class="btn secondary" id="export-json-btn" type="button">Export JSON</button>
+            <button class="btn ghost" id="print-report-btn" type="button">Print Report</button>
+          </div>
+        </div>
+
+        <div class="dashboard">
+          <div class="stat-card">
+            <p>Total Snags</p>
+            <h3 id="stat-total">0</h3>
+          </div>
+          <div class="stat-card">
+            <p>Open Snags</p>
+            <h3 id="stat-open">0</h3>
+          </div>
+          <div class="stat-card">
+            <p>Closed Snags</p>
+            <h3 id="stat-closed">0</h3>
+          </div>
+        </div>
+
+        <div class="card filters">
+          <h3>Filter &amp; Search</h3>
+          <div class="filter-grid">
+            <label>
+              <span>Status</span>
+              <select id="filter-status">
+                <option value="">All</option>
+                <option>Open</option>
+                <option>In Progress</option>
+                <option>Closed</option>
+              </select>
+            </label>
+            <label>
+              <span>Priority</span>
+              <select id="filter-priority">
+                <option value="">All</option>
+                <option>Low</option>
+                <option>Medium</option>
+                <option>High</option>
+              </select>
+            </label>
+            <label>
+              <span>Search by Title</span>
+              <input type="search" id="search-input" placeholder="e.g., Water leak" />
+            </label>
+          </div>
+        </div>
+
+        <div class="section-header">
+          <h2>Snags</h2>
+          <p class="muted">Tap a snag card to view details.</p>
+        </div>
+        <p class="empty-state" id="snags-empty">No snags recorded yet.</p>
+        <div class="grid" id="snag-list"></div>
+      </section>
+
+      <section class="view" id="snag-view">
+        <div class="card">
+          <div class="snag-header">
+            <div>
+              <h2 id="snag-form-title">Add Snag</h2>
+              <p class="muted" id="snag-date"></p>
+            </div>
+            <p class="muted" id="snag-id"></p>
+          </div>
+          <form class="form-grid" id="snag-form">
+            <label>
+              <span>Title</span>
+              <input type="text" name="title" required />
+            </label>
+            <label>
+              <span>Description</span>
+              <textarea name="description" rows="4" required></textarea>
+            </label>
+            <label>
+              <span>Category</span>
+              <select name="category" required>
+                <option value="">Select</option>
+                <option>Structural</option>
+                <option>Electrical</option>
+                <option>Plumbing</option>
+                <option>Finishes</option>
+                <option>Safety</option>
+                <option>Other</option>
+              </select>
+            </label>
+            <label>
+              <span>Location</span>
+              <input type="text" name="location" required />
+            </label>
+            <label>
+              <span>Priority</span>
+              <select name="priority" required>
+                <option value="">Select</option>
+                <option>Low</option>
+                <option>Medium</option>
+                <option>High</option>
+              </select>
+            </label>
+            <label>
+              <span>Status</span>
+              <select name="status" required>
+                <option>Open</option>
+                <option>In Progress</option>
+                <option>Closed</option>
+              </select>
+            </label>
+            <label class="file-field">
+              <span>Attach Image</span>
+              <input type="file" id="snag-image" accept="image/*" />
+            </label>
+            <div class="image-preview">
+              <img alt="Snag preview" id="snag-preview" />
+              <p class="muted" id="snag-preview-label">No image selected.</p>
+            </div>
+            <div class="form-actions">
+              <button class="btn primary" id="snag-save-btn" type="submit">Save Snag</button>
+              <button class="btn ghost" id="snag-cancel-btn" type="button">Cancel</button>
+              <button class="btn danger hidden" id="snag-delete-btn" type="button">Delete Snag</button>
+            </div>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <button class="fab hidden" id="add-snag-btn" type="button">+ Add Snag</button>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
