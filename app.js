@@ -554,7 +554,7 @@
               }
 
               const imageCell = isSafeImageData(snag.imageData)
-                ? `<img src="${snag.imageData}" alt="${escapeHtml(
+                ? `<img src="${escapeHtml(snag.imageData)}" alt="${escapeHtml(
                     snag.title
                   )}" />`
                 : `<span class="placeholder">No image</span>`;
@@ -879,10 +879,10 @@
       );
       return;
     }
-    printWindow.onload = () => {
+    printWindow.addEventListener("load", () => {
       printWindow.focus();
       printWindow.print();
-    };
+    });
     printWindow.document.open();
     printWindow.document.write(reportHtml);
     printWindow.document.close();
