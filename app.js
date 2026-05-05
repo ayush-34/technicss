@@ -163,7 +163,7 @@
     const trimmed = value.trim();
     const dataUriPattern =
       /^data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+/=]+$/;
-    return dataUriPattern.test(trimmed) ? trimmed : "";
+    return dataUriPattern.test(trimmed) ? encodeURI(trimmed) : "";
   };
 
   const formatDate = (isoDate) => new Date(isoDate).toLocaleDateString();
@@ -877,17 +877,14 @@
         </body>
       </html>`;
 
-    const printWindow = window.open(
-      "",
-      "_blank",
-      "width=1200,height=800,noopener,noreferrer"
-    );
+    const printWindow = window.open("", "_blank", "width=1200,height=800");
     if (!printWindow) {
       alert(
         "Unable to open the print window. Please enable pop-ups for this site in your browser settings."
       );
       return;
     }
+    printWindow.opener = null;
     const handlePrintLoad = () => {
       printWindow.focus();
       printWindow.print();
