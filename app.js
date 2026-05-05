@@ -868,20 +868,24 @@
         </body>
       </html>`;
 
-    const printWindow = window.open("", "_blank", "width=1200,height=800");
+    const printWindow = window.open(
+      "",
+      "_blank",
+      "width=1200,height=800,noopener,noreferrer"
+    );
     if (!printWindow) {
       alert(
         "Unable to open the print window. Please enable pop-ups for this site in your browser settings."
       );
       return;
     }
-    printWindow.document.open();
-    printWindow.document.write(reportHtml);
-    printWindow.document.close();
     printWindow.onload = () => {
       printWindow.focus();
       printWindow.print();
     };
+    printWindow.document.open();
+    printWindow.document.write(reportHtml);
+    printWindow.document.close();
   };
 
   const handlePrintReport = () => {
