@@ -58,10 +58,7 @@
     try {
       const parsed = JSON.parse(stored);
       state.projects = Array.isArray(parsed)
-        ? parsed.map((project) => ({
-            ...project,
-            snags: Array.isArray(project.snags) ? project.snags : [],
-          }))
+        ? parsed.map(sanitizeProject).filter(Boolean)
         : [];
     } catch {
       state.projects = [];
@@ -105,6 +102,51 @@
 
   const createId = (prefix) =>
     `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+
+  const createUniqueId = (prefix, existingIds) => {
+    let candidate = createId(prefix);
+    while (existingIds.has(candidate)) {
+      candidate = createId(prefix);
+    }
+    return candidate;
+  };
+
+  const sanitizeSnag = (snag) => {
+    if (!snag || typeof snag !== "object") return null;
+    if (typeof snag.id !== "string" || typeof snag.title !== "string") return null;
+    const priority = ["Low", "Medium", "High"].includes(snag.priority)
+      ? snag.priority
+      : "Low";
+    const status = ["Open", "In Progress", "Closed"].includes(snag.status)
+      ? snag.status
+      : "Open";
+    return {
+      id: snag.id,
+      title: snag.title,
+      description: typeof snag.description === "string" ? snag.description : "",
+      category: typeof snag.category === "string" ? snag.category : "Other",
+      location: typeof snag.location === "string" ? snag.location : "",
+      priority,
+      status,
+      date: typeof snag.date === "string" ? snag.date : new Date().toISOString(),
+      imageData: typeof snag.imageData === "string" ? snag.imageData : "",
+    };
+  };
+
+  const sanitizeProject = (project) => {
+    if (!project || typeof project !== "object") return null;
+    if (typeof project.id !== "string" || typeof project.name !== "string") return null;
+    return {
+      id: project.id,
+      name: project.name,
+      location: typeof project.location === "string" ? project.location : "",
+      client: typeof project.client === "string" ? project.client : "",
+      date: typeof project.date === "string" ? project.date : "",
+      snags: Array.isArray(project.snags)
+        ? project.snags.map(sanitizeSnag).filter(Boolean)
+        : [],
+    };
+  };
 
   const formatDate = (isoDate) => new Date(isoDate).toLocaleDateString();
 
@@ -267,7 +309,10 @@
     event.preventDefault();
     const form = event.target;
     const project = {
-      id: createId("project"),
+      id: createUniqueId(
+        "project",
+        new Set(state.projects.map((entry) => entry.id))
+      ),
       name: form.name.value.trim(),
       location: form.location.value.trim(),
       client: form.client.value.trim(),
@@ -317,9 +362,9 @@
     const file = event.target.files[0];
     if (!file) return;
     if (file.size > maxImageSize) {
-      const sizeInMb = (file.size / (1024 * 1024)).toFixed(2);
+      const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
       alert(
-        `Image is too large (${sizeInMb}MB). Please choose a file under 2MB.`
+        `Image is too large (${sizeInMB}MB). Please choose a file under 2MB.`
       );
       elements.snagImage.value = "";
       return;
@@ -354,7 +399,7 @@
       }
     } else {
       project.snags.unshift({
-        id: createId("snag"),
+        id: createUniqueId("snag", new Set(project.snags.map((snag) => snag.id))),
         date: new Date().toISOString(),
         ...snagPayload,
       });
